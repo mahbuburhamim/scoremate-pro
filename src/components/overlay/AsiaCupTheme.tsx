@@ -39,11 +39,11 @@ export const AsiaCupTheme: React.FC<ThemeProps> = ({ match }) => {
             />
           ) : (
             <div className="w-9 h-9 rounded-md bg-blue-600 border border-amber-400 flex items-center justify-center font-black text-sm">
-              {battingTeam.shortName}
+              {battingTeam.shortName || 'BAN'}
             </div>
           )}
           <div className="flex flex-col">
-            <span className="font-heading font-black text-lg text-white uppercase">{battingTeam.name}</span>
+            <span className="font-heading font-black text-lg text-white uppercase">{battingTeam.name || 'BANGLADESH'}</span>
             <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
               INNINGS {match.activeInningNumber}
             </span>
@@ -69,7 +69,7 @@ export const AsiaCupTheme: React.FC<ThemeProps> = ({ match }) => {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="font-bold text-sm uppercase text-emerald-400">
-              {striker?.shortName || striker?.name}*
+              {striker?.shortName || striker?.name || 'T. TAMIM'}*
             </span>
             <span className="font-score text-2xl font-bold text-white">
               {striker?.runs || 0}
@@ -80,7 +80,7 @@ export const AsiaCupTheme: React.FC<ThemeProps> = ({ match }) => {
           {/* Non-Striker */}
           <div className="flex items-center gap-2 opacity-80">
             <span className="font-bold text-sm uppercase text-slate-200">
-              {nonStriker?.shortName || nonStriker?.name}
+              {nonStriker?.shortName || nonStriker?.name || 'N. SHANTO'}
             </span>
             <span className="font-score text-2xl font-bold text-slate-300">
               {nonStriker?.runs || 0}
@@ -93,7 +93,7 @@ export const AsiaCupTheme: React.FC<ThemeProps> = ({ match }) => {
         <div className="flex items-center gap-5 px-6 bg-slate-900">
           <div className="flex flex-col">
             <span className="text-xs font-bold uppercase text-white truncate max-w-[120px]">
-              {bowler?.shortName || bowler?.name}
+              {bowler?.shortName || bowler?.name || 'A. RASHID'}
             </span>
             <span className="text-xs font-mono text-amber-400">
               {bowler?.wickets}-{bowler?.runsConceded} ({bowler?.oversBowled})

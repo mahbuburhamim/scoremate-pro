@@ -3,6 +3,11 @@ import { useCricket } from '../context/CricketContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { OverlayTheme } from '../types/cricket';
+import { CricPicTheme } from '../components/overlay/CricPicTheme';
+import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
+import { CWC23Theme } from '../components/overlay/CWC23Theme';
+import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
+import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import {
   Copy,
   ExternalLink,
@@ -82,13 +87,13 @@ export const LinksPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-6 sm:py-10 px-3 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Ambient background glows */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-sky-200/30 via-blue-100/20 to-transparent blur-3xl pointer-events-none rounded-full" />
 
-      <div className="max-w-6xl mx-auto flex flex-col gap-8 relative z-10">
+      <div className="max-w-6xl mx-auto flex flex-col gap-6 sm:gap-8 relative z-10">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200/80">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-slate-200/80">
           <div>
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-sky-100 text-blue-700 font-black text-xs uppercase tracking-wider">
@@ -96,24 +101,24 @@ export const LinksPage: React.FC = () => {
               </span>
               <span className="text-slate-500 text-xs font-mono">OBS Studio & vMix Ready</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-heading font-black tracking-tight text-slate-900 mt-1">
+            <h1 className="text-2xl sm:text-4xl font-heading font-black tracking-tight text-slate-900 mt-1">
               <span className="text-blue-600">ALL SCOREBOARD</span> LINKS
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-slate-500 text-xs sm:text-sm mt-1">
               Copy transparent browser source links for OBS Studio, vMix, Streamlabs, or mobile streaming apps (CameraFi Live).
             </p>
           </div>
 
           {/* Match Selector Dropdown */}
-          <div className="flex flex-col gap-1.5 bg-white border border-slate-200 p-3 rounded-2xl shadow-sm">
-            <label className="text-xs font-bold text-slate-500 uppercase">Select Match:</label>
+          <div className="flex flex-col gap-1.5 bg-white border border-slate-200 p-3 rounded-2xl shadow-sm w-full md:w-auto">
+            <label className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase">Select Match:</label>
             <select
               value={selectedMatchId}
               onChange={(e) => {
                 setSelectedMatchId(e.target.value);
                 setActiveMatchId(e.target.value);
               }}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-blue-600 font-bold focus:outline-none focus:border-blue-500 focus:bg-white"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-blue-600 font-bold focus:outline-none focus:border-blue-500 focus:bg-white"
             >
               {matches.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -124,13 +129,13 @@ export const LinksPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Live Mini Preview Canvas */}
-        <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-5 shadow-[0_15px_35px_rgba(2,132,199,0.06)] flex flex-col gap-4">
+        {/* Live Mini Preview Canvas (Using ResponsiveScoreboardWrapper - Zero Cutoff) */}
+        <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-3 sm:p-5 shadow-[0_15px_35px_rgba(2,132,199,0.06)] flex flex-col gap-3 sm:gap-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-blue-600" />
-              <h3 className="font-heading font-bold text-lg text-slate-900">Live Preview Studio</h3>
-              <span className="text-xs font-mono text-slate-400">
+              <Eye className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600" />
+              <h3 className="font-heading font-bold text-base sm:text-lg text-slate-900">Live Preview Studio</h3>
+              <span className="text-[11px] sm:text-xs font-mono text-slate-400 hidden sm:inline">
                 (Simulating transparent OBS broadcast overlay)
               </span>
             </div>
@@ -138,22 +143,36 @@ export const LinksPage: React.FC = () => {
               href={getOverlayUrl(previewTheme)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition active:scale-95"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Full Screen Window</span>
             </a>
           </div>
 
-          {/* 16:9 Frame Preview */}
-          <div className="relative w-full aspect-[16/7] rounded-2xl overflow-hidden border border-slate-200 bg-[url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center flex flex-col justify-end p-4 shadow-inner">
-            <div className="absolute inset-0 bg-slate-950/40 pointer-events-none" />
-            <div className="relative z-10 w-full transform scale-90 sm:scale-100 origin-bottom">
-              <iframe
-                title="Overlay Preview"
-                src={`/overlay/${currentMatch.id}?theme=${previewTheme}&transparent=true`}
-                className="w-full h-36 border-0 bg-transparent pointer-events-none"
-              />
+          {/* Stadium Frame Preview with Live Scaled Scoreboard */}
+          <div className="relative w-full min-h-[220px] sm:min-h-[280px] md:min-h-[320px] rounded-2xl overflow-hidden border border-slate-800 bg-[url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center flex flex-col justify-between p-3 sm:p-5 shadow-inner">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-slate-950/60 pointer-events-none" />
+
+            {/* Top Indicator Header */}
+            <div className="relative z-10 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-red-600 text-white font-mono text-[10px] sm:text-xs font-black tracking-widest shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span>OBS 1080P BROADCAST FEED</span>
+              </div>
+              <div className="px-3 py-1 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-cyan-300 font-mono text-[10px] sm:text-xs font-bold shadow">
+                {themes.find((t) => t.id === previewTheme)?.name}
+              </div>
+            </div>
+
+            {/* Bottom Responsive Scoreboard (Zero Cutoff on Mobile & Desktop) */}
+            <div className="relative z-10 w-full flex justify-center items-end overflow-hidden pb-1 pt-4">
+              <ResponsiveScoreboardWrapper designWidth={1240}>
+                {previewTheme === 'cricpic' && <CricPicTheme match={currentMatch} />}
+                {previewTheme === 'asiacup' && <AsiaCupTheme match={currentMatch} />}
+                {previewTheme === 'cwc23' && <CWC23Theme match={currentMatch} />}
+                {previewTheme === 'iplneon' && <IPLNeonTheme match={currentMatch} />}
+              </ResponsiveScoreboardWrapper>
             </div>
           </div>
         </div>
@@ -174,15 +193,125 @@ export const LinksPage: React.FC = () => {
             </div>
             <Link
               to="/payment"
-              className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-heading font-black text-xs uppercase tracking-wider shrink-0 transition shadow-sm"
+              className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-heading font-black text-xs uppercase tracking-wider shrink-0 transition shadow-sm w-full sm:w-auto text-center"
             >
               সাবস্ক্রাইব করুন (৳৯৯ থেকে)
             </Link>
           </div>
         )}
 
-        {/* Table of Themes */}
-        <div className="w-full overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_15px_35px_rgba(2,132,199,0.06)]">
+        {/* Mobile-Friendly Theme Cards (Visible on Small / Mobile Screens) */}
+        <div className="block lg:hidden space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-bold text-sm text-slate-800 uppercase tracking-wider">
+              Available Broadcast Themes
+            </h3>
+            <span className="text-xs text-slate-500 font-mono">Tap &quot;Preview&quot; to test theme</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3.5">
+            {themes.map((theme) => {
+              const pcLink = getOverlayUrl(theme.id);
+              const mobileLink = getOverlayUrl(theme.id, true);
+              const isSelected = previewTheme === theme.id;
+
+              return (
+                <div
+                  key={`mobile-${theme.id}`}
+                  className={`p-4 rounded-2xl border transition-all duration-200 bg-white shadow-sm flex flex-col gap-3 ${
+                    isSelected
+                      ? 'border-blue-500 ring-2 ring-blue-100 bg-sky-50/40'
+                      : 'border-slate-200/90 hover:border-slate-300'
+                  }`}
+                >
+                  {/* Card Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 font-mono text-xs font-bold flex items-center justify-center">
+                        {theme.no}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-heading font-black text-sm text-slate-900">
+                            {theme.name}
+                          </h4>
+                          <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            {theme.badge}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">{theme.description}</p>
+                      </div>
+                    </div>
+
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] shrink-0">
+                      {theme.tier}
+                    </span>
+                  </div>
+
+                  {/* Actions Grid */}
+                  <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <button
+                      onClick={() => setPreviewTheme(theme.id)}
+                      className={`px-3 py-1.5 rounded-xl font-bold text-xs uppercase transition flex items-center gap-1 ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{isSelected ? 'Previewing' : 'Preview'}</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      {hasActiveSubscription ? (
+                        <>
+                          <button
+                            onClick={() => handleCopy(pcLink, `m-pc-${theme.id}`)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold border border-slate-200 active:scale-95 transition"
+                          >
+                            {copiedKey === `m-pc-${theme.id}` ? (
+                              <Check className="w-3 h-3 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-blue-600" />
+                            )}
+                            <span>{copiedKey === `m-pc-${theme.id}` ? 'Copied' : 'Copy'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleCopy(mobileLink, `m-cam-${theme.id}`)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 active:scale-95 transition"
+                            title="CameraFi Link"
+                          >
+                            <Smartphone className="w-3 h-3" />
+                            <span>Mobile</span>
+                          </button>
+
+                          <a
+                            href={pcLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded-xl bg-slate-100 text-slate-600 border border-slate-200"
+                            title="Open Fullscreen"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-400 font-semibold text-xs border border-slate-200">
+                          <Lock className="w-3 h-3" />
+                          <span>Preview Only</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop Table of Themes (Visible on Screens >= lg) */}
+        <div className="hidden lg:block w-full overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_15px_35px_rgba(2,132,199,0.06)]">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
@@ -316,8 +445,8 @@ export const LinksPage: React.FC = () => {
         </div>
 
         {/* OBS Studio Integration Instructions Box */}
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_15px_35px_rgba(2,132,199,0.06)] text-xs sm:text-sm text-slate-700 space-y-2">
-          <h4 className="font-heading font-black text-base text-blue-600 uppercase tracking-wide flex items-center gap-2">
+        <div className="p-4 sm:p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_15px_35px_rgba(2,132,199,0.06)] text-xs sm:text-sm text-slate-700 space-y-2">
+          <h4 className="font-heading font-black text-sm sm:text-base text-blue-600 uppercase tracking-wide flex items-center gap-2">
             <Monitor className="w-4 h-4" /> How to use in OBS Studio / vMix / Streamlabs:
           </h4>
           <ol className="list-decimal list-inside space-y-1.5 text-slate-600 leading-relaxed">

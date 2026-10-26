@@ -29,6 +29,7 @@ import { CricPicTheme } from '../components/overlay/CricPicTheme';
 import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
+import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import logoImg from '../assets/logo.png';
 
 const demoMatch: Match = {
@@ -346,7 +347,7 @@ export const PublicLandingPage: React.FC = () => {
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs font-mono">
-                  <span className="font-bold text-slate-900">A. Rashid (এ. রশিদ)</span>
+                  <span className="font-bold text-slate-900">A. Rashid</span>
                   <span className="text-blue-600 font-bold">2.4-0-21-2</span>
                 </div>
               </div>
@@ -505,14 +506,14 @@ export const PublicLandingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bottom Responsive Scaled Overlay Theme */}
+              {/* Bottom Responsive Scaled Overlay Theme (Zero Cutoff on Mobile) */}
               <div className="relative z-10 w-full flex justify-center items-end overflow-hidden pb-1">
-                <div className="w-[1240px] shrink-0 transform scale-[0.34] xs:scale-[0.44] sm:scale-[0.60] md:scale-[0.74] lg:scale-[0.86] xl:scale-[0.96] origin-bottom transition-all duration-300">
+                <ResponsiveScoreboardWrapper designWidth={1240}>
                   {activeThemeTab === 'cricpic' && <CricPicTheme match={demoMatch} />}
                   {activeThemeTab === 'asiacup' && <AsiaCupTheme match={demoMatch} />}
                   {activeThemeTab === 'cwc23' && <CWC23Theme match={demoMatch} />}
                   {activeThemeTab === 'iplneon' && <IPLNeonTheme match={demoMatch} />}
-                </div>
+                </ResponsiveScoreboardWrapper>
               </div>
             </div>
 

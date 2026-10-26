@@ -18,7 +18,7 @@ export const IPLNeonTheme: React.FC<ThemeProps> = ({ match }) => {
   const crr = oversDecimal > 0 ? (activeInning.totalRuns / oversDecimal).toFixed(2) : '0.00';
 
   return (
-    <div className="w-full max-w-[1720px] mx-auto px-4 font-mono-sport drop-shadow-2xl">
+    <div className="w-full max-w-[1240px] mx-auto px-2 font-mono-sport drop-shadow-2xl">
       {/* IPL Cyber Neon angled HUD bar */}
       <div className="flex items-stretch bg-slate-950/95 rounded-2xl border border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.3)] overflow-hidden h-24 text-white">
         {/* Neon Badge */}
@@ -39,11 +39,11 @@ export const IPLNeonTheme: React.FC<ThemeProps> = ({ match }) => {
             />
           ) : (
             <div className="px-3 py-1 rounded bg-cyan-500 text-slate-950 font-black text-base shadow-[0_0_10px_rgba(6,182,212,0.6)]">
-              {battingTeam.shortName}
+              {battingTeam.shortName || 'BAN'}
             </div>
           )}
           <span className="font-heading font-black text-xl uppercase tracking-wider text-white">
-            {battingTeam.name}
+            {battingTeam.name || 'BANGLADESH'}
           </span>
         </div>
 
@@ -68,7 +68,7 @@ export const IPLNeonTheme: React.FC<ThemeProps> = ({ match }) => {
             </div>
             <div>
               <span className="font-bold text-sm uppercase text-cyan-300 flex items-center gap-1">
-                ▶ {striker?.shortName || striker?.name}*
+                ▶ {striker?.shortName || striker?.name || 'T. TAMIM'}*
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="font-score text-3xl font-bold text-white">{striker?.runs || 0}</span>
@@ -83,7 +83,7 @@ export const IPLNeonTheme: React.FC<ThemeProps> = ({ match }) => {
             </div>
             <div>
               <span className="font-bold text-sm uppercase text-slate-300">
-                {nonStriker?.shortName || nonStriker?.name}
+                {nonStriker?.shortName || nonStriker?.name || 'N. SHANTO'}
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="font-score text-2xl font-bold text-slate-300">{nonStriker?.runs || 0}</span>
@@ -98,10 +98,10 @@ export const IPLNeonTheme: React.FC<ThemeProps> = ({ match }) => {
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-pink-400">BOWLER</span>
             <span className="font-heading font-black text-base uppercase text-white truncate max-w-[130px]">
-              {bowler?.name || 'M STARC'}
+              {bowler?.shortName || bowler?.name || 'A. RASHID'}
             </span>
             <span className="font-mono text-sm text-cyan-300">
-              {bowler?.wickets}-{bowler?.runsConceded} ({bowler?.oversBowled})
+              {bowler?.wickets || 0}-{bowler?.runsConceded || 0} ({bowler?.oversBowled || 0})
             </span>
           </div>
 

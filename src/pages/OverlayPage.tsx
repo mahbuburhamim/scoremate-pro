@@ -8,6 +8,7 @@ import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
 import { EventRibbon } from '../components/overlay/EventRibbon';
 import { BroadcastCards } from '../components/overlay/BroadcastCards';
+import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import { Eye, EyeOff, Palette, Monitor } from 'lucide-react';
 
 export const OverlayPage: React.FC = () => {
@@ -150,9 +151,11 @@ export const OverlayPage: React.FC = () => {
       {/* Spacer to push lower-third to bottom */}
       <div className="flex-1" />
 
-      {/* Main Lower-Third Broadcast Strip */}
-      <div className="w-full pb-8 z-20 flex justify-center">
-        {renderTheme()}
+      {/* Main Lower-Third Broadcast Strip (Auto Responsive Scaling on Mobile & Desktop) */}
+      <div className="w-full pb-4 sm:pb-8 z-20 flex justify-center items-end overflow-hidden">
+        <ResponsiveScoreboardWrapper designWidth={1240}>
+          {renderTheme()}
+        </ResponsiveScoreboardWrapper>
       </div>
     </div>
   );

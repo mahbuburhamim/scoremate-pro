@@ -40,10 +40,10 @@ export const CWC23Theme: React.FC<ThemeProps> = ({ match }) => {
           )}
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold tracking-widest text-yellow-400">
-              {match.matchType.toUpperCase()}
+              {match.matchType?.toUpperCase() || 'SUPER 8'}
             </span>
             <span className="font-heading font-black text-2xl tracking-wider text-white uppercase drop-shadow">
-              {battingTeam.name}
+              {battingTeam.name || 'BANGLADESH'}
             </span>
           </div>
         </div>
@@ -72,7 +72,7 @@ export const CWC23Theme: React.FC<ThemeProps> = ({ match }) => {
             </div>
             <div>
               <span className="font-bold text-sm uppercase text-yellow-300 flex items-center gap-1">
-                {striker?.shortName || striker?.name}*
+                {striker?.shortName || striker?.name || 'T. TAMIM'}*
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="font-score text-2xl font-bold text-white">{striker?.runs || 0}</span>
@@ -87,7 +87,7 @@ export const CWC23Theme: React.FC<ThemeProps> = ({ match }) => {
             </div>
             <div>
               <span className="font-bold text-sm uppercase text-slate-200">
-                {nonStriker?.shortName || nonStriker?.name}
+                {nonStriker?.shortName || nonStriker?.name || 'N. SHANTO'}
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="font-score text-2xl font-bold text-slate-300">{nonStriker?.runs || 0}</span>
@@ -102,10 +102,10 @@ export const CWC23Theme: React.FC<ThemeProps> = ({ match }) => {
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold text-yellow-400">BOWLING</span>
             <span className="font-heading font-black text-base uppercase text-white truncate max-w-[130px]">
-              {bowler?.name || 'M STARC'}
+              {bowler?.shortName || bowler?.name || 'A. RASHID'}
             </span>
             <span className="font-mono text-sm text-yellow-300">
-              {bowler?.wickets}-{bowler?.runsConceded} ({bowler?.oversBowled})
+              {bowler?.wickets || 0}-{bowler?.runsConceded || 0} ({bowler?.oversBowled || 0})
             </span>
           </div>
 

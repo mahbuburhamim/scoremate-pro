@@ -75,6 +75,15 @@ function liveSyncPlugin(): Plugin {
 
         // 3. GET current match state
         if (url === '/api/match' && req.method === 'GET') {
+          if (Array.isArray(cachedMatches)) {
+            cachedMatches = cachedMatches.filter(
+              (m: any) =>
+                m.id !== 'match-ind-aus-final' &&
+                !m.team1?.name?.toUpperCase().includes('IND') &&
+                !m.team2?.name?.toUpperCase().includes('AUS')
+            );
+            if (cachedMatches.length === 0) cachedMatches = null;
+          }
           res.writeHead(200, {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',

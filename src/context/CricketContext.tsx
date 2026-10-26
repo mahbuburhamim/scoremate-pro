@@ -73,12 +73,55 @@ interface CricketContextType {
 
 const CricketContext = createContext<CricketContextType | null>(null);
 
+const isValidMatch = (m: any): m is Match => {
+  return (
+    m &&
+    typeof m === 'object' &&
+    Array.isArray(m.innings) &&
+    m.innings.length > 0 &&
+    m.team1 &&
+    typeof m.team1 === 'object' &&
+    m.team2 &&
+    typeof m.team2 === 'object'
+  );
+};
+
 export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const sanitizeMatches = useCallback((list: any[]): Match[] => {
+    if (!Array.isArray(list)) return [defaultInitialMatch];
+    let filtered = list.filter(isValidMatch);
+    filtered = filtered.filter(
+      (m) =>
+        m.id !== 'match-ind-aus-final' &&
+        !m.team1?.name?.toUpperCase().includes('IND') &&
+        !m.team2?.name?.toUpperCase().includes('AUS')
+    );
+    if (!filtered.some((m) => m.id === defaultInitialMatch.id)) {
+      filtered.unshift(defaultInitialMatch);
+    }
+    return filtered;
+  }, []);
+
   const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments());
-  const [matches, setMatches] = useState<Match[]>(() => getStoredMatches());
+  const [matches, setMatches] = useState<Match[]>(() => {
+    const stored = getStoredMatches();
+    const sanitized = stored.filter(
+      (m) =>
+        m.id !== 'match-ind-aus-final' &&
+        !m.team1?.name?.toUpperCase().includes('IND') &&
+        !m.team2?.name?.toUpperCase().includes('AUS')
+    );
+    return sanitized.length > 0 ? sanitized : [defaultInitialMatch];
+  });
   const [activeMatchId, setActiveMatchIdState] = useState<string>(() => {
     const list = getStoredMatches();
-    return list[0]?.id || defaultInitialMatch.id;
+    const sanitized = list.filter(
+      (m) =>
+        m.id !== 'match-ind-aus-final' &&
+        !m.team1?.name?.toUpperCase().includes('IND') &&
+        !m.team2?.name?.toUpperCase().includes('AUS')
+    );
+    return sanitized[0]?.id || defaultInitialMatch.id;
   });
 
   const [undoStack, setUndoStack] = useState<Match[]>([]);
@@ -86,26 +129,13 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const channelRef = useRef<BroadcastChannel | null>(null);
 
-  const isValidMatch = (m: any): m is Match => {
-    return (
-      m &&
-      typeof m === 'object' &&
-      Array.isArray(m.innings) &&
-      m.innings.length > 0 &&
-      m.team1 &&
-      typeof m.team1 === 'object' &&
-      m.team2 &&
-      typeof m.team2 === 'object'
-    );
-  };
-
   // Active match getter with bulletproof fallback
   const rawMatch = matches.find((m) => m.id === activeMatchId) || matches.find(isValidMatch);
   const activeMatch = isValidMatch(rawMatch) ? rawMatch : defaultInitialMatch;
 
   // Sync to channel and storage
   const syncMatchState = useCallback((updatedMatches: Match[], triggerPulse = true) => {
-    const validMatches = updatedMatches.filter(isValidMatch);
+    const validMatches = sanitizeMatches(updatedMatches);
     if (validMatches.length === 0) return;
 
     setMatches(validMatches);
@@ -138,7 +168,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {
       // ignore
     }
-  }, []);
+  }, [sanitizeMatches]);
 
   // Set up BroadcastChannel + SSE (Server-Sent Events for OBS) + Storage event fallback
   useEffect(() => {
@@ -146,8 +176,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     fetch('/api/match')
       .then((r) => r.json())
       .then((data) => {
-        if (data.matches && Array.isArray(data.matches) && data.matches.length > 0 && data.matches.every(isValidMatch)) {
-          setMatches(data.matches);
+        if (data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
+          setMatches(sanitizeMatches(data.matches));
         }
       })
       .catch(() => {});
@@ -159,8 +189,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       eventSource.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data);
-          if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches) && parsed.matches.every(isValidMatch)) {
-            setMatches(parsed.matches);
+          if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
+            setMatches(sanitizeMatches(parsed.matches));
           }
         } catch {
           // ignore
@@ -175,13 +205,13 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       fetch('/api/match')
         .then((r) => r.json())
         .then((data) => {
-          if (data.matches && Array.isArray(data.matches) && data.matches.length > 0 && data.matches.every(isValidMatch)) {
+          if (data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
             setMatches((current) => {
               const currUpdated = current.find((m) => m.id === activeMatchId)?.updatedAt || 0;
               const newMatch = data.matches.find((m: any) => m.id === activeMatchId);
               const newUpdated = newMatch?.updatedAt || 0;
               if (newUpdated > currUpdated) {
-                return data.matches;
+                return sanitizeMatches(data.matches);
               }
               return current;
             });
@@ -197,7 +227,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       channel.onmessage = (event) => {
         if (event.data?.type === 'MATCHES_SYNC' && Array.isArray(event.data.matches)) {
-          setMatches(event.data.matches);
+          setMatches(sanitizeMatches(event.data.matches));
         } else if (event.data?.type === 'ANIMATION_PULSE') {
           setIsSyncing(true);
           setTimeout(() => setIsSyncing(false), 600);
