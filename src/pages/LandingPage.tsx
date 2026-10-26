@@ -182,7 +182,7 @@ export const LandingPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="mt-auto py-8 border-t border-slate-800 bg-slate-950 text-center text-xs text-slate-500">
-        <p>ScoreMate PRO • Live Cricket Scoreboard Controller & Transparent Broadcast Overlay System</p>
+        <p>IconicScorer • Live Cricket Scoreboard Controller & Transparent Broadcast Overlay System</p>
       </footer>
     </div>
   );

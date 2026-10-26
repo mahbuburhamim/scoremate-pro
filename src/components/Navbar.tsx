@@ -19,7 +19,7 @@ export const Navbar: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-heading font-black text-xl tracking-tight text-white">
-                SCOREMATE <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-400">PRO</span>
+                ICONIC<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-400">SCORER</span>
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                 v2.5
