@@ -16,6 +16,8 @@ import {
   Eye,
   CheckCircle2,
   ExternalLink,
+  Trash2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useCricket } from '../context/CricketContext';
 import { Player, DisplayMode, UmpireDecision, AnimationTrigger } from '../types/cricket';
@@ -79,7 +81,51 @@ export const ControllerPage: React.FC = () => {
   const [showRetireModal, setShowRetireModal] = useState(false);
   const [showShortNameModal, setShowShortNameModal] = useState(false);
   const [showLogoModal, setShowLogoModal] = useState(false);
+  const [team1LogoDraft, setTeam1LogoDraft] = useState<string>('');
+  const [team2LogoDraft, setTeam2LogoDraft] = useState<string>('');
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Manual team logo file upload with canvas compression
+  const handleLogoFileUpload = (file: File, isTeam1: boolean) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new (window as any).Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 320;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/png');
+          if (isTeam1) {
+            setTeam1LogoDraft(compressed);
+          } else {
+            setTeam2LogoDraft(compressed);
+          }
+        } else {
+          const res = e.target?.result as string;
+          if (isTeam1) setTeam1LogoDraft(res);
+          else setTeam2LogoDraft(res);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Squad inputs
   const [team1BulkInput, setTeam1BulkInput] = useState('');
@@ -598,7 +644,11 @@ export const ControllerPage: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setShowLogoModal(true)}
+              onClick={() => {
+                setTeam1LogoDraft(activeMatch.team1.logoUrl || '');
+                setTeam2LogoDraft(activeMatch.team2.logoUrl || '');
+                setShowLogoModal(true);
+              }}
               className="px-3.5 py-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-xs font-bold tracking-wide border border-white/20 transition flex items-center gap-1.5"
             >
               <Upload className="w-3.5 h-3.5" />
@@ -1227,52 +1277,167 @@ export const ControllerPage: React.FC = () => {
         </div>
       )}
 
-      {/* EDIT LOGOS MODAL */}
+      {/* EDIT & UPLOAD TEAM LOGOS MODAL */}
       {showLogoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h3 className="font-heading font-bold text-base text-white">Edit Team Logos</h3>
-              <button onClick={() => setShowLogoModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-4 h-4" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl flex flex-col gap-4 text-white">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Upload className="w-5 h-5 text-cyan-400" />
+                <h3 className="font-heading font-black text-lg text-white">Edit & Upload Team Logos</h3>
+              </div>
+              <button
+                onClick={() => setShowLogoModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-slate-300 block mb-1">
-                  {activeMatch.team1.name} Logo URL:
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  defaultValue={activeMatch.team1.logoUrl || ''}
-                  id="t1Logo"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white"
-                />
+
+            <p className="text-xs text-slate-400">
+              Upload logo images directly from your device (PNG with transparent background recommended) or enter an image URL.
+            </p>
+
+            <div className="space-y-4">
+              {/* Team 1 Card */}
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-black text-sm text-cyan-300 uppercase tracking-wide">
+                    {activeMatch.team1.name}
+                  </span>
+                  {team1LogoDraft && (
+                    <button
+                      type="button"
+                      onClick={() => setTeam1LogoDraft('')}
+                      className="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Preview Avatar */}
+                  <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-cyan-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow">
+                    {team1LogoDraft ? (
+                      <img src={team1LogoDraft} alt={activeMatch.team1.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-500 text-[10px] font-bold text-center">
+                        <ImageIcon className="w-5 h-5 text-slate-600 mb-0.5" />
+                        <span>NO LOGO</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Button */}
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <label className="w-full py-2.5 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold cursor-pointer flex items-center justify-center gap-2 transition active:scale-95 shadow-sm">
+                      <Upload className="w-4 h-4" />
+                      <span>Upload from Device</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoFileUpload(file, true);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Optional URL Input */}
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Or paste image URL (https://...)"
+                    value={team1LogoDraft}
+                    onChange={(e) => setTeam1LogoDraft(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="font-semibold text-slate-300 block mb-1">
-                  {activeMatch.team2.name} Logo URL:
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  defaultValue={activeMatch.team2.logoUrl || ''}
-                  id="t2Logo"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white"
-                />
+
+              {/* Team 2 Card */}
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-heading font-black text-sm text-pink-300 uppercase tracking-wide">
+                    {activeMatch.team2.name}
+                  </span>
+                  {team2LogoDraft && (
+                    <button
+                      type="button"
+                      onClick={() => setTeam2LogoDraft('')}
+                      className="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1 font-semibold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Preview Avatar */}
+                  <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-pink-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow">
+                    {team2LogoDraft ? (
+                      <img src={team2LogoDraft} alt={activeMatch.team2.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-500 text-[10px] font-bold text-center">
+                        <ImageIcon className="w-5 h-5 text-slate-600 mb-0.5" />
+                        <span>NO LOGO</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Upload Button */}
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <label className="w-full py-2.5 px-3 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/40 text-pink-300 text-xs font-bold cursor-pointer flex items-center justify-center gap-2 transition active:scale-95 shadow-sm">
+                      <Upload className="w-4 h-4" />
+                      <span>Upload from Device</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoFileUpload(file, false);
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Optional URL Input */}
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Or paste image URL (https://...)"
+                    value={team2LogoDraft}
+                    onChange={(e) => setTeam2LogoDraft(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-pink-400"
+                  />
+                </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
               <button
+                type="button"
+                onClick={() => setShowLogoModal(false)}
+                className="px-4 py-2 rounded-xl text-slate-400 hover:bg-slate-800 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
                 onClick={() => {
-                  const l1 = (document.getElementById('t1Logo') as HTMLInputElement)?.value;
-                  const l2 = (document.getElementById('t2Logo') as HTMLInputElement)?.value;
-                  updateTeamDetails(activeMatch.team1.id, { logoUrl: l1 });
-                  updateTeamDetails(activeMatch.team2.id, { logoUrl: l2 });
+                  updateTeamDetails(activeMatch.team1.id, { logoUrl: team1LogoDraft });
+                  updateTeamDetails(activeMatch.team2.id, { logoUrl: team2LogoDraft });
                   setShowLogoModal(false);
                 }}
-                className="px-4 py-2 rounded-xl bg-cyan-400 text-slate-950 font-bold text-xs"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-400/25 active:scale-95 transition"
               >
                 Save Logos
               </button>

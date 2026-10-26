@@ -31,9 +31,17 @@ export const AsiaCupTheme: React.FC<ThemeProps> = ({ match }) => {
 
         {/* Batting Team Flag & Name */}
         <div className="flex items-center gap-3 px-5 bg-gradient-to-r from-blue-950 to-slate-900 border-r border-slate-800">
-          <div className="w-9 h-9 rounded-md bg-blue-600 border border-amber-400 flex items-center justify-center font-black text-sm">
-            {battingTeam.shortName}
-          </div>
+          {battingTeam.logoUrl ? (
+            <img
+              src={battingTeam.logoUrl}
+              alt={battingTeam.name}
+              className="w-10 h-10 object-contain rounded-md border border-amber-400 bg-white/10 p-0.5"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-md bg-blue-600 border border-amber-400 flex items-center justify-center font-black text-sm">
+              {battingTeam.shortName}
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="font-heading font-black text-lg text-white uppercase">{battingTeam.name}</span>
             <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">

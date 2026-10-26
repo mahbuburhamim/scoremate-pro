@@ -64,6 +64,8 @@ interface CricketContextType {
     optedTo: 'bat' | 'bowl';
     ballsPerOver?: number;
     matchType?: 'Group Stage' | 'Knockout' | 'Semi Final' | 'Final';
+    team1LogoUrl?: string;
+    team2LogoUrl?: string;
   }) => Match;
   manualSyncPulse: () => void;
   isSyncing: boolean;
@@ -699,6 +701,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       optedTo,
       ballsPerOver = 6,
       matchType = 'Group Stage',
+      team1LogoUrl,
+      team2LogoUrl,
     }: {
       tournamentId: string;
       team1Name: string;
@@ -709,6 +713,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       optedTo: 'bat' | 'bowl';
       ballsPerOver?: number;
       matchType?: 'Group Stage' | 'Knockout' | 'Semi Final' | 'Final';
+      team1LogoUrl?: string;
+      team2LogoUrl?: string;
     }): Match => {
       const team1Id = `team-${Date.now()}-1`;
       const team2Id = `team-${Date.now()}-2`;
@@ -720,6 +726,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         id: team1Id,
         name: team1Name.toUpperCase(),
         shortName: team1Short,
+        logoUrl: team1LogoUrl,
         primaryColor: '#1d4ed8',
         secondaryColor: '#0284c7',
         players: [
@@ -766,6 +773,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         id: team2Id,
         name: team2Name.toUpperCase(),
         shortName: team2Short,
+        logoUrl: team2LogoUrl,
         primaryColor: '#eab308',
         secondaryColor: '#15803d',
         players: [

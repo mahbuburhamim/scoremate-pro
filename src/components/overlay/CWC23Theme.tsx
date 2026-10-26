@@ -31,6 +31,13 @@ export const CWC23Theme: React.FC<ThemeProps> = ({ match }) => {
 
         {/* Batting Team Crest */}
         <div className="flex items-center gap-4 px-6 border-r border-yellow-500/30">
+          {battingTeam.logoUrl && (
+            <img
+              src={battingTeam.logoUrl}
+              alt={battingTeam.name}
+              className="w-12 h-12 object-contain rounded-xl bg-black/40 p-1 border border-yellow-500/40 shadow-lg"
+            />
+          )}
           <div className="flex flex-col">
             <span className="text-[10px] uppercase font-bold tracking-widest text-yellow-400">
               {match.matchType.toUpperCase()}

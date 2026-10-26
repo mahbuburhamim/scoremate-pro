@@ -12,6 +12,8 @@ import {
   X,
   ChevronRight,
   Flame,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export const TournamentPage: React.FC = () => {
@@ -34,13 +36,53 @@ export const TournamentPage: React.FC = () => {
 
   // Form states for Create Match
   const [team1Name, setTeam1Name] = useState('India');
+  const [team1Logo, setTeam1Logo] = useState('');
   const [team2Name, setTeam2Name] = useState('Australia');
+  const [team2Logo, setTeam2Logo] = useState('');
   const [matchOvers, setMatchOvers] = useState(20);
   const [matchNo, setMatchNo] = useState('Match 1');
   const [tossWonBy, setTossWonBy] = useState<'team1' | 'team2'>('team1');
   const [optedTo, setOptedTo] = useState<'bat' | 'bowl'>('bat');
   const [ballsPerOver, setBallsPerOver] = useState(6);
   const [matchType, setMatchType] = useState<'Group Stage' | 'Knockout' | 'Semi Final' | 'Final'>('Group Stage');
+
+  const handleLogoUpload = (file: File, isTeam1: boolean) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new (window as any).Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 320;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/png');
+          if (isTeam1) setTeam1Logo(compressed);
+          else setTeam2Logo(compressed);
+        } else {
+          const res = e.target?.result as string;
+          if (isTeam1) setTeam1Logo(res);
+          else setTeam2Logo(res);
+        }
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const activeTour = tournaments.find((t) => t.id === selectedTourId) || tournaments[0];
   const tourMatches = matches.filter((m) => m.tournamentId === activeTour?.id || !m.tournamentId);
@@ -69,6 +111,8 @@ export const TournamentPage: React.FC = () => {
       optedTo,
       ballsPerOver,
       matchType,
+      team1LogoUrl: team1Logo,
+      team2LogoUrl: team2Logo,
     });
 
     setShowCreateMatchModal(false);
@@ -337,8 +381,9 @@ export const TournamentPage: React.FC = () => {
               </div>
 
               <form onSubmit={handleCreateMatch} className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Team 1 Name *</label>
+                {/* Team 1 Config */}
+                <div className="space-y-2">
+                  <label className="font-bold text-slate-300 block">Team 1 Name *</label>
                   <input
                     type="text"
                     required
@@ -346,10 +391,42 @@ export const TournamentPage: React.FC = () => {
                     onChange={(e) => setTeam1Name(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white"
                   />
+                  <div className="flex items-center gap-2 pt-1">
+                    {team1Logo ? (
+                      <img src={team1Logo} alt="T1 Logo" className="w-9 h-9 rounded-lg object-contain bg-slate-900 border border-cyan-400 p-0.5" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500">
+                        <ImageIcon className="w-4 h-4" />
+                      </div>
+                    )}
+                    <label className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-300 cursor-pointer flex items-center gap-1.5 transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{team1Logo ? 'Change Logo' : 'Upload Team 1 Logo'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoUpload(file, true);
+                        }}
+                      />
+                    </label>
+                    {team1Logo && (
+                      <button
+                        type="button"
+                        onClick={() => setTeam1Logo('')}
+                        className="text-[11px] text-red-400 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Team 2 Name *</label>
+                {/* Team 2 Config */}
+                <div className="space-y-2">
+                  <label className="font-bold text-slate-300 block">Team 2 Name *</label>
                   <input
                     type="text"
                     required
@@ -357,6 +434,37 @@ export const TournamentPage: React.FC = () => {
                     onChange={(e) => setTeam2Name(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white"
                   />
+                  <div className="flex items-center gap-2 pt-1">
+                    {team2Logo ? (
+                      <img src={team2Logo} alt="T2 Logo" className="w-9 h-9 rounded-lg object-contain bg-slate-900 border border-pink-400 p-0.5" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500">
+                        <ImageIcon className="w-4 h-4" />
+                      </div>
+                    )}
+                    <label className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-pink-300 cursor-pointer flex items-center gap-1.5 transition">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{team2Logo ? 'Change Logo' : 'Upload Team 2 Logo'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleLogoUpload(file, false);
+                        }}
+                      />
+                    </label>
+                    {team2Logo && (
+                      <button
+                        type="button"
+                        onClick={() => setTeam2Logo('')}
+                        className="text-[11px] text-red-400 hover:underline"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div>

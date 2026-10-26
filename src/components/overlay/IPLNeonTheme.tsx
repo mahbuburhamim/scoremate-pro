@@ -31,9 +31,17 @@ export const IPLNeonTheme: React.FC<ThemeProps> = ({ match }) => {
 
         {/* Batting Team Tag */}
         <div className="flex items-center gap-3 px-6 bg-slate-900 border-r border-cyan-500/40">
-          <div className="px-3 py-1 rounded bg-cyan-500 text-slate-950 font-black text-base shadow-[0_0_10px_rgba(6,182,212,0.6)]">
-            {battingTeam.shortName}
-          </div>
+          {battingTeam.logoUrl ? (
+            <img
+              src={battingTeam.logoUrl}
+              alt={battingTeam.name}
+              className="w-11 h-11 object-contain rounded-lg border border-cyan-400 bg-slate-950 p-1 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+            />
+          ) : (
+            <div className="px-3 py-1 rounded bg-cyan-500 text-slate-950 font-black text-base shadow-[0_0_10px_rgba(6,182,212,0.6)]">
+              {battingTeam.shortName}
+            </div>
+          )}
           <span className="font-heading font-black text-xl uppercase tracking-wider text-white">
             {battingTeam.name}
           </span>

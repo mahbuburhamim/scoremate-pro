@@ -39,13 +39,22 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
           className="flex-1 flex items-center justify-between px-6 py-2 text-white border-r border-white/20"
         >
           {/* Batting Team Badge */}
-          <div className="flex flex-col items-start pr-4 border-r border-white/10 shrink-0">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-300">
-              BATTING
-            </span>
-            <span className="font-heading font-black text-xl tracking-wider uppercase drop-shadow">
-              {battingTeam.name}
-            </span>
+          <div className="flex items-center gap-3 pr-4 border-r border-white/10 shrink-0">
+            {battingTeam.logoUrl && (
+              <img
+                src={battingTeam.logoUrl}
+                alt={battingTeam.name}
+                className="w-11 h-11 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md"
+              />
+            )}
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-300">
+                BATTING
+              </span>
+              <span className="font-heading font-black text-xl tracking-wider uppercase drop-shadow">
+                {battingTeam.name}
+              </span>
+            </div>
           </div>
 
           {/* Batters List */}
@@ -231,13 +240,22 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
           </div>
 
           {/* Bowling Team Badge */}
-          <div className="flex flex-col items-end pl-4 border-l border-white/10 shrink-0">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-yellow-300">
-              FIELDING
-            </span>
-            <span className="font-heading font-black text-xl tracking-wider uppercase drop-shadow text-white">
-              {bowlingTeam.name}
-            </span>
+          <div className="flex items-center gap-3 pl-4 border-l border-white/10 shrink-0">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] uppercase font-bold tracking-widest text-yellow-300">
+                FIELDING
+              </span>
+              <span className="font-heading font-black text-xl tracking-wider uppercase drop-shadow text-white">
+                {bowlingTeam.name}
+              </span>
+            </div>
+            {bowlingTeam.logoUrl && (
+              <img
+                src={bowlingTeam.logoUrl}
+                alt={bowlingTeam.name}
+                className="w-11 h-11 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md"
+              />
+            )}
           </div>
         </div>
       </div>
