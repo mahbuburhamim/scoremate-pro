@@ -10,13 +10,13 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         {/* Brand */}
-        <NavLink to="/" className="flex items-center gap-3 group">
+        <NavLink to="/" className="flex items-center gap-3 group py-1">
           <img
             src={logoImg}
             alt="IconicScorer"
-            className="h-9 sm:h-10 w-auto object-contain hover:scale-105 transition-transform drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+            className="h-12 sm:h-14 md:h-16 w-auto max-w-[220px] sm:max-w-[260px] object-contain hover:scale-105 transition-transform drop-shadow-[0_0_15px_rgba(6,182,212,0.45)]"
           />
           <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hidden sm:inline-block">
             v2.5

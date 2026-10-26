@@ -39,7 +39,7 @@ export const LandingPage: React.FC = () => {
             <img
               src="/logo.png"
               alt="IconicScorer"
-              className="h-16 sm:h-24 md:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(236,72,153,0.4)] animate-in fade-in duration-300"
+              className="h-24 sm:h-36 md:h-44 max-w-[85vw] w-auto object-contain drop-shadow-[0_0_35px_rgba(236,72,153,0.55)] animate-in fade-in duration-300"
             />
           </div>
 
