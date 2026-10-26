@@ -437,6 +437,118 @@ export const PublicLandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* Broadcast Tools Integration & Compatibility (Exact Match from Screenshot) */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full border-t border-slate-800/80">
+        {/* Top: FITS YOUR BROADCAST WORKFLOW */}
+        <div className="flex flex-col text-left">
+          <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
+            FITS YOUR BROADCAST WORKFLOW
+          </span>
+          <h2 className="text-3xl sm:text-4xl text-white font-medium tracking-tight mt-2 font-sans">
+            Bring your scoreboard into the tools you use.
+          </h2>
+
+          {/* 4 Tool Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+            {/* 1. vMix */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#090d16] border border-slate-800/90 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="w-9 h-9 rounded-lg bg-[#001733] border border-blue-500/30 p-1.5 flex items-center justify-center shrink-0 shadow">
+                <div className="grid grid-cols-3 gap-0.5 w-full h-full">
+                  <span className="bg-sky-400 rounded-[1px]" />
+                  <span className="bg-cyan-400 rounded-[1px]" />
+                  <span className="bg-blue-500 rounded-[1px]" />
+                  <span className="bg-teal-400 rounded-[1px]" />
+                  <span className="bg-emerald-400 rounded-[1px]" />
+                  <span className="bg-amber-400 rounded-[1px]" />
+                  <span className="bg-orange-500 rounded-[1px]" />
+                  <span className="bg-rose-500 rounded-[1px]" />
+                  <span className="bg-fuchsia-500 rounded-[1px]" />
+                </div>
+              </div>
+              <span className="font-heading font-black text-lg text-white tracking-wide">
+                vMix
+              </span>
+            </div>
+
+            {/* 2. OBS */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#090d16] border border-slate-800/90 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="w-9 h-9 rounded-lg bg-black border border-slate-700 p-1.5 flex items-center justify-center shrink-0 shadow">
+                <svg viewBox="0 0 100 100" className="w-full h-full fill-white" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="6" />
+                  <path d="M50 20 A30 30 0 0 1 80 50 A15 15 0 0 0 65 35 A15 15 0 0 0 50 20 Z" />
+                  <path d="M80 50 A30 30 0 0 1 50 80 A15 15 0 0 0 50 65 A15 15 0 0 0 80 50 Z" />
+                  <path d="M50 80 A30 30 0 0 1 20 50 A15 15 0 0 0 35 65 A15 15 0 0 0 50 80 Z" />
+                  <circle cx="50" cy="50" r="8" fill="white" />
+                </svg>
+              </div>
+              <span className="font-heading font-black text-lg text-white tracking-wide">
+                OBS
+              </span>
+            </div>
+
+            {/* 3. PRISM Live Studio */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#090d16] border border-slate-800/90 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="w-9 h-9 rounded-lg bg-[#0e071e] border border-purple-500/30 p-1 flex items-center justify-center shrink-0 shadow">
+                <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="prismGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#f43f5e" />
+                      <stop offset="50%" stopColor="#a855f7" />
+                      <stop offset="100%" stopColor="#06b6d4" />
+                    </linearGradient>
+                  </defs>
+                  <polygon points="50,15 88,80 12,80" fill="none" stroke="url(#prismGrad)" strokeWidth="8" strokeLinejoin="round" />
+                  <polygon points="50,32 74,74 26,74" fill="none" stroke="url(#prismGrad)" strokeWidth="6" strokeLinejoin="round" opacity="0.8" />
+                  <polygon points="50,48 62,69 38,69" fill="url(#prismGrad)" opacity="0.9" />
+                </svg>
+              </div>
+              <span className="font-heading font-black text-lg text-white tracking-wide">
+                PRISM Live Studio
+              </span>
+            </div>
+
+            {/* 4. CameraFi Live */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#090d16] border border-slate-800/90 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[#e11d48] to-[#fb7185] p-1 flex flex-col items-center justify-center shrink-0 shadow">
+                <div className="flex items-center gap-0.5 text-[7px] font-black text-white leading-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <span>LIVE</span>
+                </div>
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white text-white mt-0.5" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4zm14 2.8 4-2.4v11.2l-4-2.4V8.8z" />
+                </svg>
+              </div>
+              <span className="font-heading font-black text-lg text-white tracking-wide">
+                CameraFi Live
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom: YOUR MATCH. YOUR BROADCAST. */}
+        <div className="mt-16 pt-12 border-t border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="flex flex-col text-left">
+            <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
+              YOUR MATCH. YOUR BROADCAST.
+            </span>
+            <h3 className="text-3xl sm:text-4xl text-white font-medium tracking-tight mt-1.5 font-sans">
+              Make every over part of the show.
+            </h3>
+            <p className="text-sm text-slate-400 mt-2 font-normal">
+              Create a tournament, score the match, and bring the live board into your stream.
+            </p>
+          </div>
+
+          <Link
+            to="/tournament"
+            className="px-6 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-heading font-black text-sm flex items-center gap-2 shadow-lg shadow-cyan-400/25 active:scale-95 transition shrink-0"
+          >
+            <span>Create a tournament</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </section>
+
       {/* CTA Final Banner */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full text-center">
         <div className="p-10 sm:p-14 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-cyan-500/30 shadow-2xl relative overflow-hidden flex flex-col items-center">
