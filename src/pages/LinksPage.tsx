@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useCricket } from '../context/CricketContext';
+import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { OverlayTheme } from '../types/cricket';
 import {
   Copy,
@@ -11,6 +13,7 @@ import {
   Smartphone,
   Monitor,
   Flame,
+  Lock,
 } from 'lucide-react';
 
 interface ThemeRow {
@@ -24,6 +27,7 @@ interface ThemeRow {
 
 export const LinksPage: React.FC = () => {
   const { matches, activeMatch, setActiveMatchId } = useCricket();
+  const { hasActiveSubscription } = useAuth();
   const [selectedMatchId, setSelectedMatchId] = useState<string>(activeMatch.id);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<OverlayTheme>('cricpic');
@@ -154,6 +158,29 @@ export const LinksPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Guest Preview Notice if not subscribed */}
+        {!hasActiveSubscription && (
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-800 shrink-0 font-bold">
+                👀
+              </div>
+              <div className="text-xs">
+                <span className="font-bold block text-amber-950">পাবলিক প্রিভিউ মোড (Guest Preview Active)</span>
+                <span className="text-amber-800">
+                  আপনি লগইন ছাড়াই সব থিমের লাইভ প্রিভিউ দেখতে পারবেন। OBS তে ব্যবহারের জন্য কপি লিঙ্ক পেতে প্যাকেজ সাবস্ক্রাইব করুন।
+                </span>
+              </div>
+            </div>
+            <Link
+              to="/payment"
+              className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-heading font-black text-xs uppercase tracking-wider shrink-0 transition shadow-sm"
+            >
+              সাবস্ক্রাইব করুন (৳৯৯ থেকে)
+            </Link>
+          </div>
+        )}
+
         {/* Table of Themes */}
         <div className="w-full overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_15px_35px_rgba(2,132,199,0.06)]">
           <div className="overflow-x-auto">
@@ -207,50 +234,64 @@ export const LinksPage: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* PC Link & Copy */}
+                      {/* PC Link & Copy (Strictly hidden for guests/unsubscribed users) */}
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleCopy(pcLink, `pc-${theme.id}`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition"
-                          >
-                            {copiedKey === `pc-${theme.id}` ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5 text-blue-600" />
-                            )}
-                            <span>{copiedKey === `pc-${theme.id}` ? 'Copied!' : 'Copy Link'}</span>
-                          </button>
+                        {hasActiveSubscription ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleCopy(pcLink, `pc-${theme.id}`)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition"
+                            >
+                              {copiedKey === `pc-${theme.id}` ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                              <span>{copiedKey === `pc-${theme.id}` ? 'Copied!' : 'Copy Link'}</span>
+                            </button>
 
-                          <a
-                            href={pcLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200"
-                            title="Open Link in New Tab"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
+                            <a
+                              href={pcLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200"
+                              title="Open Link in New Tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-400 font-semibold text-xs border border-slate-200/80 select-none">
+                            <Lock className="w-3 h-3 text-slate-400" />
+                            <span>Preview Only (No Copy)</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* CameraFi Mobile Link */}
                       <td className="py-4 px-6">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleCopy(mobileLink, `cam-${theme.id}`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition"
-                          >
-                            {copiedKey === `cam-${theme.id}` ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : (
-                              <Smartphone className="w-3.5 h-3.5 text-rose-600" />
-                            )}
-                            <span>
-                              {copiedKey === `cam-${theme.id}` ? 'Copied!' : 'CameraFi Link'}
-                            </span>
-                          </button>
-                        </div>
+                        {hasActiveSubscription ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleCopy(mobileLink, `cam-${theme.id}`)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition"
+                            >
+                              {copiedKey === `cam-${theme.id}` ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Smartphone className="w-3.5 h-3.5 text-rose-600" />
+                              )}
+                              <span>
+                                {copiedKey === `cam-${theme.id}` ? 'Copied!' : 'CameraFi Link'}
+                              </span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-slate-400 font-semibold text-xs border border-slate-200/80 select-none">
+                            <Lock className="w-3 h-3 text-slate-400" />
+                            <span>Preview Only</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* Live Preview Button */}

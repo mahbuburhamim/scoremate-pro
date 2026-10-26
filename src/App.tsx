@@ -79,15 +79,8 @@ const AppLayout: React.FC = () => {
             }
           />
 
-          {/* Protected Scoreboard Links */}
-          <Route
-            path="/links"
-            element={
-              <ProtectedRoute featureName="Scoreboard Links">
-                <LinksPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Public Scoreboard Links (Anyone can preview, but Copy Link requires subscription) */}
+          <Route path="/links" element={<LinksPage />} />
 
           {/* Public OBS Transparent Broadcast Overlay (Never blocked for OBS Browser Source) */}
           <Route path="/overlay/:matchId" element={<OverlayPage />} />

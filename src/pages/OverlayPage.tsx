@@ -21,6 +21,7 @@ export const OverlayPage: React.FC = () => {
   // Toggle stadium background for browser testing
   const [showStadiumBg, setShowStadiumBg] = useState<boolean>(false);
   const [showTestBar, setShowTestBar] = useState<boolean>(true);
+  const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   // Match lookup
   const match = matches.find((m) => m.id === matchId) || activeMatch;
@@ -68,72 +69,76 @@ export const OverlayPage: React.FC = () => {
         height: '100vh',
       }}
     >
-      {/* Subtle testing toolbar (auto hides on hover/timeout or can be toggled) */}
-      <div
-        className={`fixed top-4 left-4 z-50 transition-opacity duration-300 ${
-          showTestBar ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-950/90 border border-slate-800 text-xs text-white shadow-2xl backdrop-blur-md">
-          {/* Theme switcher */}
-          <div className="flex items-center gap-1 px-2 border-r border-slate-800">
-            <Palette className="w-3.5 h-3.5 text-cyan-400" />
-            <select
-              value={themeParam}
-              onChange={(e) => {
-                searchParams.set('theme', e.target.value);
-                setSearchParams(searchParams);
-              }}
-              className="bg-transparent text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
-            >
-              <option value="cricpic" className="bg-slate-900 text-white">
-                1. CricPic Cutout Pro
-              </option>
-              <option value="asiacup" className="bg-slate-900 text-white">
-                2. Asia Cup Classic
-              </option>
-              <option value="cwc23" className="bg-slate-900 text-white">
-                3. CWC 23 Gold Edition
-              </option>
-              <option value="iplneon" className="bg-slate-900 text-white">
-                4. IPL Cyber Neon
-              </option>
-            </select>
-          </div>
-
-          {/* Toggle Stadium Preview */}
-          <button
-            onClick={() => setShowStadiumBg((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold transition ${
-              showStadiumBg
-                ? 'bg-emerald-500 text-slate-950 shadow'
-                : 'bg-slate-800 text-slate-300 hover:text-white'
+      {/* Subtle testing toolbar (relocated to top-right corner, completely hidden inside iframes) */}
+      {!isInsideIframe && (
+        <>
+          <div
+            className={`fixed top-3 right-3 z-50 transition-opacity duration-300 ${
+              showTestBar ? 'opacity-90 hover:opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
-            <Monitor className="w-3.5 h-3.5" />
-            <span>{showStadiumBg ? 'Stadium Preview: ON' : 'Stadium Preview: OFF'}</span>
-          </button>
+            <div className="flex items-center gap-2 p-1.5 rounded-full bg-slate-950/90 border border-slate-700/80 text-xs text-white shadow-2xl backdrop-blur-md">
+              {/* Theme switcher */}
+              <div className="flex items-center gap-1 px-2.5 border-r border-slate-800">
+                <Palette className="w-3.5 h-3.5 text-cyan-400" />
+                <select
+                  value={themeParam}
+                  onChange={(e) => {
+                    searchParams.set('theme', e.target.value);
+                    setSearchParams(searchParams);
+                  }}
+                  className="bg-transparent text-xs text-cyan-300 font-bold focus:outline-none cursor-pointer"
+                >
+                  <option value="cricpic" className="bg-slate-900 text-white">
+                    1. CricPic Cutout Pro
+                  </option>
+                  <option value="asiacup" className="bg-slate-900 text-white">
+                    2. Asia Cup Classic
+                  </option>
+                  <option value="cwc23" className="bg-slate-900 text-white">
+                    3. CWC 23 Gold Edition
+                  </option>
+                  <option value="iplneon" className="bg-slate-900 text-white">
+                    4. IPL Cyber Neon
+                  </option>
+                </select>
+              </div>
 
-          {/* Hide Toolbar Button */}
-          <button
-            onClick={() => setShowTestBar(false)}
-            title="Hide Testing Toolbar for clean OBS capture"
-            className="p-1 rounded-lg text-slate-400 hover:text-white"
-          >
-            <EyeOff className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
+              {/* Toggle Stadium Preview */}
+              <button
+                onClick={() => setShowStadiumBg((prev) => !prev)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-bold transition text-xs ${
+                  showStadiumBg
+                    ? 'bg-emerald-500 text-slate-950 shadow'
+                    : 'bg-slate-800 text-slate-300 hover:text-white'
+                }`}
+              >
+                <Monitor className="w-3.5 h-3.5" />
+                <span>{showStadiumBg ? 'Stadium Preview: ON' : 'Stadium Preview: OFF'}</span>
+              </button>
 
-      {/* Floating unhide button if testbar was hidden */}
-      {!showTestBar && (
-        <button
-          onClick={() => setShowTestBar(true)}
-          title="Show Overlay Testing Toolbar"
-          className="fixed top-2 left-2 z-50 p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950 text-slate-500 hover:text-cyan-400 transition"
-        >
-          <Eye className="w-3.5 h-3.5" />
-        </button>
+              {/* Hide Toolbar Button */}
+              <button
+                onClick={() => setShowTestBar(false)}
+                title="Hide Testing Toolbar for clean OBS capture"
+                className="p-1 rounded-full text-slate-400 hover:text-white"
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Floating unhide button if testbar was hidden */}
+          {!showTestBar && (
+            <button
+              onClick={() => setShowTestBar(true)}
+              title="Show Overlay Testing Toolbar"
+              className="fixed top-3 right-3 z-50 p-2 rounded-full bg-slate-950/60 hover:bg-slate-950 text-slate-400 hover:text-cyan-400 transition shadow-lg border border-slate-800"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </>
       )}
 
       {/* Full-Screen & Pop-up Graphics */}

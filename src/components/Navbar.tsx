@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useCricket } from '../context/CricketContext';
 import { useAuth } from '../context/AuthContext';
+import { SubscriptionCountdown } from './SubscriptionCountdown';
 import logoImg from '../assets/logo.png';
 
 export const Navbar: React.FC = () => {
@@ -99,32 +100,31 @@ export const Navbar: React.FC = () => {
             Contact
           </NavLink>
 
-          {/* Member Only links if subscribed */}
-          {hasActiveSubscription && (
-            <>
-              <NavLink
-                to="/links"
-                className={({ isActive }) =>
-                  `transition font-medium ${
-                    isActive ? 'text-blue-600 font-bold' : 'text-slate-600 hover:text-blue-600'
-                  }`
-                }
-              >
-                Scoreboard Links
-              </NavLink>
+          {/* Public Scoreboard Links for Preview */}
+          <NavLink
+            to="/links"
+            className={({ isActive }) =>
+              `transition font-medium ${
+                isActive ? 'text-blue-600 font-bold' : 'text-slate-600 hover:text-blue-600'
+              }`
+            }
+          >
+            Scoreboard Links
+          </NavLink>
 
-              <NavLink
-                to={`/controller/${activeMatch.id}`}
-                className={({ isActive }) =>
-                  `flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200 hover:bg-blue-100 transition ${
-                    isActive ? 'ring-2 ring-blue-400/40' : ''
-                  }`
-                }
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                <span>Controller</span>
-              </NavLink>
-            </>
+          {/* Controller link if subscribed */}
+          {hasActiveSubscription && (
+            <NavLink
+              to={`/controller/${activeMatch.id}`}
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200 hover:bg-blue-100 transition ${
+                  isActive ? 'ring-2 ring-blue-400/40' : ''
+                }`
+              }
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Controller</span>
+            </NavLink>
           )}
 
           {/* Create Account link for unauthenticated visitors */}
@@ -141,7 +141,12 @@ export const Navbar: React.FC = () => {
         {/* Right Actions: Desktop */}
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              {/* Live Subscription Countdown */}
+              {user?.planExpiryTimestamp && (
+                <SubscriptionCountdown compact />
+              )}
+
               {/* Ticket Pill */}
               <div
                 title="Remaining Match Tickets"
@@ -219,9 +224,14 @@ export const Navbar: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-mono font-bold">
-                <Ticket className="w-3.5 h-3.5 text-amber-600" />
-                <span>{user?.ticketsRemaining ?? 15}</span>
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-mono font-bold">
+                  <Ticket className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{user?.ticketsRemaining ?? 15}</span>
+                </div>
+                {user?.planExpiryTimestamp && (
+                  <SubscriptionCountdown compact />
+                )}
               </div>
             </div>
           )}
@@ -237,6 +247,18 @@ export const Navbar: React.FC = () => {
               }
             >
               Home
+            </NavLink>
+
+            <NavLink
+              to="/links"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `p-3 rounded-xl transition ${
+                  isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
+                }`
+              }
+            >
+              Scoreboard Links
             </NavLink>
 
             <NavLink
@@ -279,31 +301,17 @@ export const Navbar: React.FC = () => {
             </NavLink>
 
             {hasActiveSubscription && (
-              <>
-                <NavLink
-                  to="/links"
-                  onClick={closeMenu}
-                  className={({ isActive }) =>
-                    `p-3 rounded-xl transition ${
-                      isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  Scoreboard Links
-                </NavLink>
-
-                <NavLink
-                  to={`/controller/${activeMatch.id}`}
-                  onClick={closeMenu}
-                  className="p-3 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-between shadow-md"
-                >
-                  <span className="flex items-center gap-2">
-                    <SlidersHorizontal className="w-4 h-4" />
-                    <span>Open Live Scorer Controller</span>
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </NavLink>
-              </>
+              <NavLink
+                to={`/controller/${activeMatch.id}`}
+                onClick={closeMenu}
+                className="p-3 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-between shadow-md mt-1"
+              >
+                <span className="flex items-center gap-2">
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>Open Live Scorer Controller</span>
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </NavLink>
             )}
           </nav>
 

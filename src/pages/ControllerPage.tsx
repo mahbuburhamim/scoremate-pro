@@ -20,12 +20,15 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { useCricket } from '../context/CricketContext';
+import { useAuth } from '../context/AuthContext';
+import { SubscriptionCountdown } from '../components/SubscriptionCountdown';
 import { Player, DisplayMode, UmpireDecision, AnimationTrigger } from '../types/cricket';
 import { calculateStorageUsage } from '../utils/storage';
 import { ImageCropperModal } from '../components/ImageCropperModal';
 
 export const ControllerPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
+  const { user } = useAuth();
   const {
     matches,
     activeMatch,
@@ -307,9 +310,12 @@ export const ControllerPage: React.FC = () => {
             </Link>
           </div>
 
-          {/* Right Green Pill */}
-          <div className="px-3 py-1 rounded-full bg-emerald-500 text-white font-bold shadow-sm">
-            Account Expiry Date: Active Pro
+          {/* Right Green Pill with Live Countdown */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="px-3 py-1 rounded-full bg-emerald-500 text-white font-bold shadow-sm text-xs">
+              Account Expiry: {user?.planExpiryDate || 'Active Pro'}
+            </div>
+            <SubscriptionCountdown compact className="bg-emerald-400 text-slate-950 border-emerald-300 font-bold shadow-sm" />
           </div>
         </div>
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCricket } from '../context/CricketContext';
 import { useAuth } from '../context/AuthContext';
+import { SubscriptionCountdown } from '../components/SubscriptionCountdown';
 import {
   Radio,
   Tv,
@@ -52,9 +53,12 @@ export const DashboardPage: React.FC = () => {
                   PRO SUBSCRIBER
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Plan: <strong className="text-slate-800">{user?.planName || 'Monthly v1'}</strong> • Valid until: <strong className="text-slate-700">{user?.planExpiryDate || 'Active'}</strong>
-              </p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <p className="text-xs text-slate-500">
+                  Plan: <strong className="text-slate-800">{user?.planName || '1 Day Pro'}</strong> • Valid until: <strong className="text-slate-700">{user?.planExpiryDate || 'Active'}</strong>
+                </p>
+                <SubscriptionCountdown compact />
+              </div>
             </div>
           </div>
 

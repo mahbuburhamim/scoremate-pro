@@ -8,11 +8,10 @@ export const PaymentPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, purchasePlan, isAuthenticated, signup } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan>(SUBSCRIPTION_PLANS[0]);
-  const [currency, setCurrency] = useState<'INR' | 'BDT' | 'USD'>('INR');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState<boolean>(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'bkash' | 'card'>('razorpay');
+  const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad'>('bkash');
 
   // Customer form for guest users
   const [buyerName, setBuyerName] = useState(user?.name || '');
@@ -21,15 +20,9 @@ export const PaymentPage: React.FC = () => {
   const [trxId, setTrxId] = useState('');
   const [formError, setFormError] = useState('');
 
-  // Conversion rates for preview if user toggles currency
+  // Prices are all in Bangladeshi Taka (BDT ৳)
   const getDisplayPrice = (plan: Plan) => {
-    if (currency === 'BDT') {
-      return `৳${Math.round(plan.price * 1.45)}`;
-    }
-    if (currency === 'USD') {
-      return `$${Math.round(plan.price * 0.012)}`;
-    }
-    return `₹${plan.price}`;
+    return `৳${plan.price}`;
   };
 
   const handleProceed = () => {
@@ -40,10 +33,15 @@ export const PaymentPage: React.FC = () => {
   const handleConfirmPayment = async () => {
     if (!isAuthenticated) {
       if (!buyerEmail.trim() || !buyerName.trim()) {
-        setFormError('Please enter your Name and Email so we can link your subscription.');
+        setFormError('দয়া করে আপনার নাম এবং ইমেইল দিন যাতে সাবস্ক্রিপশন যুক্ত করা যায়।');
         return;
       }
       await signup(buyerName, buyerEmail, buyerPhone);
+    }
+
+    if (!trxId.trim()) {
+      setFormError('অনুগ্রহ করে পেমেন্ট করার পর বিকাশ বা নগদের TrxID নম্বরটি লিখুন।');
+      return;
     }
 
     setIsProcessing(true);
@@ -67,62 +65,39 @@ export const PaymentPage: React.FC = () => {
       setTimeout(() => {
         setShowCheckoutModal(false);
         navigate('/dashboard');
-      }, 1800);
+      }, 2000);
     }, 1200);
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-10 px-4 sm:px-6 lg:px-8 flex flex-col items-center relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#dbeafe] via-[#eff6ff] to-[#f8fafc] text-slate-900 py-10 px-4 sm:px-6 lg:px-8 flex flex-col items-center relative overflow-hidden">
       {/* Ambient background glows */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-sky-200/30 via-blue-100/20 to-transparent blur-3xl pointer-events-none rounded-full" />
-      <div className="absolute top-1/3 -right-20 w-80 h-80 bg-cyan-200/20 blur-3xl pointer-events-none rounded-full" />
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[750px] h-[380px] bg-gradient-to-b from-sky-300/35 via-blue-200/25 to-transparent blur-3xl pointer-events-none rounded-full" />
+      <div className="absolute top-1/3 -right-20 w-80 h-80 bg-cyan-300/25 blur-3xl pointer-events-none rounded-full" />
 
       <div className="w-full max-w-6xl flex flex-col gap-8 relative z-10">
         {/* Main Card Container */}
         <div className="w-full rounded-3xl bg-white/95 border border-slate-200/90 p-5 sm:p-10 shadow-[0_20px_50px_rgba(2,132,199,0.08)] backdrop-blur-xl flex flex-col items-center relative overflow-hidden">
           {/* Top subtle glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-sky-400/15 blur-3xl pointer-events-none rounded-full" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-sky-400/20 blur-3xl pointer-events-none rounded-full" />
 
           {/* Secure Checkout Pill */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-sky-50 border border-sky-200/80 text-xs font-bold text-sky-700 shadow-sm">
             <Lock className="w-3.5 h-3.5 text-blue-600" />
-            <span>Secure Checkout via Razorpay & bKash</span>
+            <span>Secure MFS Checkout via bKash (বিকাশ) & Nagad (নগদ)</span>
           </div>
 
           {/* Title Header */}
           <h1 className="mt-4 font-heading font-black text-3xl sm:text-5xl text-slate-900 tracking-tight text-center">
-            <span className="text-blue-600">IconicScorer</span> PRO
+            <span className="text-blue-600">IconicScorer</span> PRO PLANS
           </h1>
           <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium text-center">
-            Choose a plan and unlock all premium TV-grade broadcast themes
+            সকল টুর্নামেন্ট ও ম্যাচের জন্য বিডিটি (৳) তে সাশ্রয়ী প্যাকেজ • পেমেন্ট করলেই লাইভ ২৪ ঘণ্টা কাউন্টডাউন শুরু
           </p>
 
-          {/* Currency Toggle */}
-          <div className="mt-4 flex items-center gap-1 p-1 bg-slate-100 border border-slate-200 rounded-full text-xs font-bold">
-            <button
-              onClick={() => setCurrency('INR')}
-              className={`px-3.5 py-1 rounded-full transition ${
-                currency === 'INR' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              INR (₹)
-            </button>
-            <button
-              onClick={() => setCurrency('BDT')}
-              className={`px-3.5 py-1 rounded-full transition ${
-                currency === 'BDT' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              BDT (৳)
-            </button>
-            <button
-              onClick={() => setCurrency('USD')}
-              className={`px-3.5 py-1 rounded-full transition ${
-                currency === 'USD' ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              USD ($)
-            </button>
+          {/* Currency Badge */}
+          <div className="mt-4 inline-flex items-center gap-1.5 px-4 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs font-bold text-blue-700">
+            <span>মুদ্রা: বাংলাদেশি টাকা (BDT ৳)</span>
           </div>
 
           {/* Plan Cards Grid (16 Cards, 2 cols on mobile, 3 on sm, 4 on md, 6 on lg) */}
@@ -171,11 +146,11 @@ export const PaymentPage: React.FC = () => {
               <span className="flex items-center gap-1.5">
                 Duration <Info className="w-3.5 h-3.5 text-slate-400" />
               </span>
-              <span className="font-bold text-slate-900">{selectedPlan.durationDays} Day(s)</span>
+              <span className="font-bold text-slate-900">{selectedPlan.durationDays} Day(s) (Real-Time 24h Countdown)</span>
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <span className="text-sm sm:text-base font-bold text-slate-700">Total Amount</span>
+              <span className="text-sm sm:text-base font-bold text-slate-700">Total Amount (মোট টাকা)</span>
               <span className="font-score text-3xl sm:text-4xl font-black text-slate-900">
                 {getDisplayPrice(selectedPlan)}
               </span>
@@ -185,14 +160,14 @@ export const PaymentPage: React.FC = () => {
             <div className="mt-3 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200/80">
               <div className="text-xs text-slate-500 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Instant broadcast activation unlocked immediately upon payment confirmation.</span>
+                <span>পেমেন্ট নিশ্চিত করার সাথে সাথেই স্বয়ংক্রিয়ভাবে লাইভ ২৪ ঘণ্টা ব্রডকাস্ট সময় চালু হয়ে যাবে।</span>
               </div>
 
               <button
                 onClick={handleProceed}
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-sm uppercase tracking-wider shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] active:scale-95 transition flex items-center justify-center gap-2"
               >
-                <span>Proceed to Pay</span>
+                <span>Proceed to Pay (পেমেন্ট করুন)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -200,7 +175,7 @@ export const PaymentPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Checkout Modal with Multi-Gateway Selector */}
+      {/* Checkout Modal with Strictly bKash & Nagad Gateways */}
       {showCheckoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="bg-white/95 border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl flex flex-col gap-4 text-slate-900 backdrop-blur-2xl">
@@ -213,7 +188,7 @@ export const PaymentPage: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowCheckoutModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 text-sm"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 text-sm font-bold"
               >
                 ✕
               </button>
@@ -226,9 +201,9 @@ export const PaymentPage: React.FC = () => {
                 </div>
                 <h4 className="font-heading font-black text-2xl text-slate-900">Payment Confirmed!</h4>
                 <p className="text-sm text-slate-600">
-                  Your <strong>{selectedPlan.name}</strong> subscription has been activated with <strong>{selectedPlan.tickets} match tickets</strong>.
+                  আপনার <strong>{selectedPlan.name}</strong> প্যাকেজ সফলভাবে চালু হয়েছে। ২৪ ঘণ্টার রিয়েল-টাইম কাউন্টডাউন শুরু হয়েছে।
                 </p>
-                <span className="text-xs text-blue-600 font-mono">Redirecting to Member Dashboard...</span>
+                <span className="text-xs text-blue-600 font-mono">ড্যাশবোর্ডে প্রবেশ করানো হচ্ছে...</span>
               </div>
             ) : (
               <>
@@ -247,22 +222,22 @@ export const PaymentPage: React.FC = () => {
                 {!isAuthenticated && (
                   <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <span className="text-xs font-bold text-blue-600 block uppercase tracking-wider">
-                      Subscriber Details
+                      গ্রাহকের তথ্য (Subscriber Details)
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div>
-                        <label className="block text-slate-600 mb-1 font-semibold">Your Name *</label>
+                        <label className="block text-slate-600 mb-1 font-semibold">আপনার নাম *</label>
                         <input
                           type="text"
                           required
-                          placeholder="Full Name"
+                          placeholder="পূর্ণ নাম"
                           value={buyerName}
                           onChange={(e) => setBuyerName(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-600 mb-1 font-semibold">Your Email *</label>
+                        <label className="block text-slate-600 mb-1 font-semibold">ইমেইল ঠিকানা *</label>
                         <input
                           type="email"
                           required
@@ -276,51 +251,108 @@ export const PaymentPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Gateway Selector */}
+                {/* Gateway Selector: Strictly bKash & Nagad Only */}
                 <div className="space-y-2 text-xs">
-                  <label className="font-bold text-slate-700 block">Select Payment Gateway:</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('razorpay')}
-                      className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 font-bold transition ${
-                        paymentMethod === 'razorpay'
-                          ? 'bg-blue-50/80 border-blue-500 text-blue-700 shadow-sm'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <CreditCard className="w-5 h-5 text-blue-600" />
-                      <span>Razorpay / UPI / Card</span>
-                    </button>
-
+                  <label className="font-bold text-slate-700 block">পেমেন্ট মেথড নির্বাচন করুন (বিকাশ অথবা নগদ):</label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* bKash */}
                     <button
                       type="button"
                       onClick={() => setPaymentMethod('bkash')}
-                      className={`p-3 rounded-2xl border flex flex-col items-center gap-1.5 font-bold transition ${
+                      className={`p-3.5 rounded-2xl border-2 flex flex-col items-center gap-1.5 font-bold transition ${
                         paymentMethod === 'bkash'
-                          ? 'bg-pink-50/80 border-pink-500 text-pink-700 shadow-sm'
+                          ? 'bg-pink-50 border-[#d12053] text-[#d12053] shadow-md ring-2 ring-pink-200 scale-[1.02]'
                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <Smartphone className="w-5 h-5 text-pink-600" />
-                      <span>bKash / Nagad (BD MFS)</span>
+                      <div className="w-8 h-8 rounded-full bg-[#d12053] text-white flex items-center justify-center font-black text-sm shadow">
+                        ৳
+                      </div>
+                      <span className="font-heading font-black text-sm">bKash (বিকাশ)</span>
+                      <span className="text-[10px] text-pink-600 font-mono">Personal Send Money</span>
+                    </button>
+
+                    {/* Nagad */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('nagad')}
+                      className={`p-3.5 rounded-2xl border-2 flex flex-col items-center gap-1.5 font-bold transition ${
+                        paymentMethod === 'nagad'
+                          ? 'bg-amber-50 border-[#f7921e] text-[#f7921e] shadow-md ring-2 ring-amber-200 scale-[1.02]'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#f7921e] text-white flex items-center justify-center font-black text-sm shadow">
+                        ৳
+                      </div>
+                      <span className="font-heading font-black text-sm">Nagad (নগদ)</span>
+                      <span className="text-[10px] text-amber-700 font-mono">Personal Send Money</span>
                     </button>
                   </div>
                 </div>
 
-                {/* bKash instructions if selected */}
+                {/* Instructions Box depending on gateway */}
                 {paymentMethod === 'bkash' && (
-                  <div className="p-3.5 rounded-2xl bg-pink-50 border border-pink-200 text-xs space-y-2">
-                    <p className="text-pink-900">
-                      Send <strong>{getDisplayPrice(selectedPlan)}</strong> via bKash / Nagad Send Money to: <code className="bg-white px-2 py-0.5 rounded font-mono text-pink-700 font-bold border border-pink-200">+8801700000000</code>
+                  <div className="p-4 rounded-2xl bg-pink-50/90 border border-pink-200 text-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#d12053] flex items-center gap-1">
+                        <Smartphone className="w-4 h-4" /> বিকাশ সেন্ড মানি নির্দেশনা:
+                      </span>
+                      <span className="font-bold text-[#d12053] bg-pink-100 px-2 py-0.5 rounded-full font-mono">
+                        {getDisplayPrice(selectedPlan)}
+                      </span>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      আপনার বিকাশ অ্যাপ থেকে <strong>{getDisplayPrice(selectedPlan)}</strong> টাকা নিচে দেওয়া নম্বরে <strong>Send Money</strong> করুন:
                     </p>
-                    <input
-                      type="text"
-                      placeholder="Enter TrxID (e.g. 9JA28X8P)"
-                      value={trxId}
-                      onChange={(e) => setTrxId(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-xl bg-white border border-pink-300 text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:border-pink-500"
-                    />
+                    <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-pink-200">
+                      <span className="text-slate-500 font-semibold">বিকাশ পার্সোনাল নম্বর:</span>
+                      <code className="font-mono text-pink-700 font-black text-sm">+8801700000000</code>
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">
+                        বিকাশ TrxID (Transaction ID) লিখুন:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: 9JA28X8P"
+                        value={trxId}
+                        onChange={(e) => setTrxId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-pink-300 text-slate-900 text-xs font-mono placeholder-slate-400 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-200"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'nagad' && (
+                  <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#f7921e] flex items-center gap-1">
+                        <Smartphone className="w-4 h-4" /> নগদ সেন্ড মানি নির্দেশনা:
+                      </span>
+                      <span className="font-bold text-[#f7921e] bg-amber-100 px-2 py-0.5 rounded-full font-mono">
+                        {getDisplayPrice(selectedPlan)}
+                      </span>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      আপনার নগদ অ্যাপ থেকে <strong>{getDisplayPrice(selectedPlan)}</strong> টাকা নিচে দেওয়া নম্বরে <strong>Send Money</strong> করুন:
+                    </p>
+                    <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-amber-200">
+                      <span className="text-slate-500 font-semibold">নগদ পার্সোনাল নম্বর:</span>
+                      <code className="font-mono text-amber-700 font-black text-sm">+8801800000000</code>
+                    </div>
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">
+                        নগদ TrxID (Transaction ID) লিখুন:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: 7KD92Q1M"
+                        value={trxId}
+                        onChange={(e) => setTrxId(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-slate-900 text-xs font-mono placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-200"
+                      />
+                    </div>
                   </div>
                 )}
 

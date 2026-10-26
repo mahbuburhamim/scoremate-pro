@@ -24,7 +24,154 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { useAuth, SUBSCRIPTION_PLANS } from '../context/AuthContext';
+import { Match } from '../types/cricket';
+import { CricPicTheme } from '../components/overlay/CricPicTheme';
+import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
+import { CWC23Theme } from '../components/overlay/CWC23Theme';
+import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
 import logoImg from '../assets/logo.png';
+
+const demoMatch: Match = {
+  id: 'demo-ban-eng',
+  tournamentId: 't-super8',
+  matchNo: 'MATCH 28 • SUPER 8',
+  matchType: 'Group Stage',
+  overs: 20,
+  ballsPerOver: 6,
+  status: 'live',
+  tossWonByTeamId: 'ban',
+  tossDecision: 'bat',
+  activeInningNumber: 1,
+  displayMode: 'DEFAULT',
+  umpireDecision: 'NONE',
+  activeAnimation: null,
+  venue: 'Kensington Oval, Barbados',
+  updatedAt: Date.now(),
+  innings: [
+    {
+      inningNumber: 1,
+      battingTeamId: 'ban',
+      bowlingTeamId: 'eng',
+      totalRuns: 176,
+      wickets: 3,
+      oversDisplay: '17.2',
+      legalBalls: 104,
+      extras: {
+        wides: 3,
+        noBalls: 1,
+        byes: 2,
+        legByes: 2,
+        total: 8,
+      },
+      currentStrikerId: 'p-tamim',
+      currentNonStrikerId: 'p-shanto',
+      currentBowlerId: 'p-rashid',
+      currentOverBalls: [],
+      allBalls: [],
+      fow: [],
+      isCompleted: false,
+    },
+    {
+      inningNumber: 2,
+      battingTeamId: 'eng',
+      bowlingTeamId: 'ban',
+      totalRuns: 0,
+      wickets: 0,
+      oversDisplay: '0.0',
+      legalBalls: 0,
+      extras: {
+        wides: 0,
+        noBalls: 0,
+        byes: 0,
+        legByes: 0,
+        total: 0,
+      },
+      currentStrikerId: '',
+      currentNonStrikerId: '',
+      currentBowlerId: '',
+      currentOverBalls: [],
+      allBalls: [],
+      fow: [],
+      isCompleted: false,
+    },
+  ],
+  team1: {
+    id: 'ban',
+    name: 'BANGLADESH',
+    shortName: 'BAN',
+    primaryColor: '#047857',
+    secondaryColor: '#dc2626',
+    logoUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=200&q=80',
+    players: [
+      {
+        id: 'p-tamim',
+        name: 'T. Tamim',
+        shortName: 'T. Tamim',
+        role: 'batsman',
+        runs: 64,
+        balls: 38,
+        fours: 7,
+        sixes: 3,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+        photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+      },
+      {
+        id: 'p-shanto',
+        name: 'N. Shanto',
+        shortName: 'N. Shanto',
+        role: 'batsman',
+        runs: 32,
+        balls: 19,
+        fours: 4,
+        sixes: 1,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+        photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+      },
+    ],
+  },
+  team2: {
+    id: 'eng',
+    name: 'ENGLAND',
+    shortName: 'ENG',
+    primaryColor: '#1e3a8a',
+    secondaryColor: '#dc2626',
+    players: [
+      {
+        id: 'p-rashid',
+        name: 'A. Rashid',
+        shortName: 'A. Rashid',
+        role: 'bowler',
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        oversBowled: 2.4,
+        ballsBowled: 16,
+        maidens: 0,
+        runsConceded: 21,
+        wickets: 2,
+        widesConceded: 1,
+        noBallsConceded: 0,
+        photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80',
+      },
+    ],
+  },
+};
 
 export const PublicLandingPage: React.FC = () => {
   const { openAuthModal } = useAuth();
@@ -58,11 +205,11 @@ export const PublicLandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-blue-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#dbeafe] via-[#eff6ff] to-[#f8fafc] text-slate-900 flex flex-col selection:bg-blue-600 selection:text-white relative overflow-hidden">
       {/* Soft Luminous Blue Ambient Gradients (Ada Aesthetic) */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[650px] bg-gradient-to-b from-sky-300/30 via-blue-200/15 to-transparent blur-[110px] pointer-events-none rounded-full" />
-      <div className="absolute top-80 -left-20 w-96 h-96 bg-blue-400/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-96 -right-20 w-96 h-96 bg-cyan-400/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1300px] h-[700px] bg-gradient-to-b from-sky-400/40 via-blue-300/25 to-transparent blur-[120px] pointer-events-none rounded-full" />
+      <div className="absolute top-80 -left-20 w-96 h-96 bg-blue-500/20 rounded-full blur-[110px] pointer-events-none" />
+      <div className="absolute top-96 -right-20 w-96 h-96 bg-cyan-400/25 rounded-full blur-[110px] pointer-events-none" />
 
       {/* Hero Section */}
       <section className="relative pt-10 sm:pt-16 pb-20 px-4 sm:px-6 lg:px-8">
@@ -105,7 +252,7 @@ export const PublicLandingPage: React.FC = () => {
               className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-blue-600 via-sky-500 to-blue-600 hover:from-blue-500 hover:to-sky-400 text-white font-heading font-bold text-base shadow-[0_12px_28px_-6px_rgba(37,99,235,0.45)] hover:shadow-[0_16px_32px_-6px_rgba(37,99,235,0.55)] active:scale-95 transition flex items-center justify-center gap-2"
             >
               <CreditCard className="w-5 h-5" />
-              <span>Choose Plan (From ₹250)</span>
+              <span>Choose Plan (From 99 টাকা)</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
@@ -121,22 +268,10 @@ export const PublicLandingPage: React.FC = () => {
           {/* Ada-Inspired Floating App Mockup & Widgets */}
           <div className="mt-14 w-full max-w-4xl relative flex flex-col items-center">
             {/* Ambient Backlight under mockup */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-sky-300/30 to-cyan-300/20 blur-3xl rounded-full pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/25 via-sky-300/35 to-cyan-300/25 blur-3xl rounded-full pointer-events-none" />
 
-            {/* Floating Left Card (Ada Style) */}
-            <div className="hidden lg:flex absolute left-0 top-12 z-20 items-center gap-3 p-3.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/80 shadow-[0_15px_35px_rgba(2,132,199,0.1),0_1px_3px_rgba(0,0,0,0.05)]">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600">
-                <Activity className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Live Run Rate</span>
-                <span className="font-score text-xl font-bold text-slate-900 leading-none">8.42 CRR</span>
-                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">● Optimal Pace</span>
-              </div>
-            </div>
-
-            {/* Floating Right Card (Ada Style) */}
-            <div className="hidden lg:flex absolute right-0 top-16 z-20 items-center gap-3 p-3.5 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/80 shadow-[0_15px_35px_rgba(2,132,199,0.1),0_1px_3px_rgba(0,0,0,0.05)]">
+            {/* Floating Right Card (Ada Style with OBS live indicator) */}
+            <div className="hidden lg:flex absolute -right-6 top-10 z-20 items-center gap-3 p-3.5 rounded-2xl bg-white/95 backdrop-blur-xl border border-white/90 shadow-[0_15px_35px_rgba(2,132,199,0.12),0_1px_3px_rgba(0,0,0,0.05)] animate-float-delayed">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600">
                 <Radio className="w-5 h-5 animate-pulse" />
               </div>
@@ -148,7 +283,7 @@ export const PublicLandingPage: React.FC = () => {
             </div>
 
             {/* Center Device / Live Controller Canvas Card */}
-            <div className="w-full rounded-3xl bg-white/90 backdrop-blur-2xl border border-white/90 p-5 sm:p-8 shadow-[0_25px_60px_-15px_rgba(2,132,199,0.12),0_1px_4px_rgba(0,0,0,0.04)] relative z-10 flex flex-col gap-6">
+            <div className="w-full rounded-3xl bg-white/95 backdrop-blur-2xl border border-white/90 p-5 sm:p-8 shadow-[0_25px_60px_-15px_rgba(2,132,199,0.14),0_1px_4px_rgba(0,0,0,0.04)] relative z-10 flex flex-col gap-6">
               {/* Match Header Bar */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-2">
@@ -158,19 +293,19 @@ export const PublicLandingPage: React.FC = () => {
                   </span>
                 </div>
                 <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-mono text-xs font-bold border border-blue-200/60">
-                  T20 CHAMPIONSHIP • FINAL
+                  T20 WORLD CUP • SUPER 8
                 </span>
               </div>
 
-              {/* Match Overview Box */}
+              {/* Match Overview Box (Bangladesh vs England) */}
               <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6 py-2">
-                {/* Team 1 */}
+                {/* Team 1: BANGLADESH */}
                 <div className="flex items-center gap-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-heading font-black text-base flex items-center justify-center shadow-md">
-                    IND
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-700 text-white font-heading font-black text-base flex items-center justify-center shadow-md">
+                    BAN
                   </div>
                   <div className="text-left">
-                    <span className="font-heading font-black text-lg text-slate-900 block">INDIA</span>
+                    <span className="font-heading font-black text-lg text-slate-900 block">BANGLADESH</span>
                     <span className="text-xs text-slate-500 font-mono">11 Players Squad</span>
                   </div>
                 </div>
@@ -181,38 +316,38 @@ export const PublicLandingPage: React.FC = () => {
                     1ST INNINGS
                   </span>
                   <div className="font-score text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-600 leading-none">
-                    184 - 3
+                    176 - 3
                   </div>
                   <span className="text-xs font-mono font-bold text-slate-600 mt-1.5">
-                    17.4 / 20 OVERS
+                    17.2 / 20 OVERS
                   </span>
                 </div>
 
-                {/* Team 2 */}
+                {/* Team 2: ENGLAND */}
                 <div className="flex items-center gap-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white font-heading font-black text-base flex items-center justify-center shadow-md">
-                    AUS
+                  <div className="w-12 h-12 rounded-2xl bg-blue-900 text-white font-heading font-black text-base flex items-center justify-center shadow-md">
+                    ENG
                   </div>
                   <div className="text-left">
-                    <span className="font-heading font-black text-lg text-slate-900 block">AUSTRALIA</span>
+                    <span className="font-heading font-black text-lg text-slate-900 block">ENGLAND</span>
                     <span className="text-xs text-slate-500 font-mono">11 Players Squad</span>
                   </div>
                 </div>
               </div>
 
-              {/* Active Batters & Bowler Preview */}
+              {/* Active Batters (T. Tamim*) & Bowler (A. Rashid) Preview */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs font-mono">
                   <span className="font-bold text-slate-900 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    V. Kohli* 78 (44)
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    T. Tamim* 64 (38)
                   </span>
-                  <span className="text-slate-500">S. Yadav 34 (16)</span>
+                  <span className="text-slate-500">N. Shanto 32 (19)</span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs font-mono">
-                  <span className="font-bold text-slate-900">M. Starc</span>
-                  <span className="text-blue-600 font-bold">3.4-0-31-2</span>
+                  <span className="font-bold text-slate-900">A. Rashid (এ. রশিদ)</span>
+                  <span className="text-blue-600 font-bold">2.4-0-21-2</span>
                 </div>
               </div>
             </div>
@@ -220,10 +355,10 @@ export const PublicLandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Services & Capabilities Section (Ada Card Grid) */}
+      {/* Services & Capabilities Section (Lively Floating Cards & Animated Icons) */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
         <div className="text-center mb-16">
-          <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-4 py-1.5 rounded-full border border-blue-200/80">
+          <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-100/70 px-4 py-1.5 rounded-full border border-blue-200/80 shadow-sm">
             OUR BROADCAST SERVICES
           </span>
           <h2 className="font-heading font-black text-3xl sm:text-4xl md:text-5xl text-slate-900 mt-4 tracking-tight">
@@ -235,86 +370,104 @@ export const PublicLandingPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Card 1 */}
-          <div className="p-7 rounded-3xl bg-white/90 backdrop-blur-xl border border-slate-200/80 hover:border-blue-300 shadow-[0_15px_35px_rgba(2,132,199,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_45px_rgba(2,132,199,0.12)] transition flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shadow-sm">
-              <Tv className="w-6 h-6" />
+          {/* Card 1 - TV Broadcast */}
+          <div className="p-7 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-200/80 hover:border-blue-400 shadow-[0_15px_35px_rgba(2,132,199,0.06)] hover:shadow-[0_22px_45px_rgba(2,132,199,0.15)] transition-all duration-300 flex flex-col gap-4 animate-float-gentle group">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shadow-sm group-hover:scale-110 transition-transform">
+              <Tv className="w-6 h-6 animate-icon-lively" />
             </div>
-            <h3 className="font-heading font-black text-xl text-slate-900">4 TV Broadcast Themes</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-black text-xl text-slate-900">4 TV Broadcast Themes</h3>
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            </div>
             <p className="text-slate-600 text-sm leading-relaxed">
-              Transparent bottom-third scoreboards styled after world-class networks like Star Sports, Asia Cup, and IPL Cyber Neon.
+              Transparent bottom-third scoreboards styled after world-class networks like Star Sports, Asia Cup, CWC 23, and IPL Cyber Neon.
             </p>
           </div>
 
-          {/* Card 2 */}
-          <div className="p-7 rounded-3xl bg-white/90 backdrop-blur-xl border border-slate-200/80 hover:border-blue-300 shadow-[0_15px_35px_rgba(2,132,199,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_45px_rgba(2,132,199,0.12)] transition flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200/80 flex items-center justify-center text-sky-600 shadow-sm">
-              <Crop className="w-6 h-6" />
+          {/* Card 2 - Player Cutout */}
+          <div className="p-7 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-200/80 hover:border-sky-400 shadow-[0_15px_35px_rgba(2,132,199,0.06)] hover:shadow-[0_22px_45px_rgba(2,132,199,0.15)] transition-all duration-300 flex flex-col gap-4 animate-float-delayed group">
+            <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200/80 flex items-center justify-center text-sky-600 shadow-sm group-hover:scale-110 transition-transform">
+              <Crop className="w-6 h-6 animate-icon-lively" />
             </div>
-            <h3 className="font-heading font-black text-xl text-slate-900">Player Photo Cutout Studio</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-black text-xl text-slate-900">Player Photo Cutout Studio</h3>
+              <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+            </div>
             <p className="text-slate-600 text-sm leading-relaxed">
               Upload local player photos and crop them with our built-in HTML5 circular canvas studio with real-time zoom, pan, and rotate.
             </p>
           </div>
 
-          {/* Card 3 */}
-          <div className="p-7 rounded-3xl bg-white/90 backdrop-blur-xl border border-slate-200/80 hover:border-blue-300 shadow-[0_15px_35px_rgba(2,132,199,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_45px_rgba(2,132,199,0.12)] transition flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-sm">
-              <SlidersHorizontal className="w-6 h-6" />
+          {/* Card 3 - Live Controller */}
+          <div className="p-7 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-200/80 hover:border-emerald-400 shadow-[0_15px_35px_rgba(2,132,199,0.06)] hover:shadow-[0_22px_45px_rgba(2,132,199,0.15)] transition-all duration-300 flex flex-col gap-4 animate-float-gentle group">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shadow-sm group-hover:scale-110 transition-transform">
+              <SlidersHorizontal className="w-6 h-6 animate-icon-lively" />
             </div>
-            <h3 className="font-heading font-black text-xl text-slate-900">Live Controller & DRS</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-black text-xl text-slate-900">Live Controller & DRS</h3>
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
             <p className="text-slate-600 text-sm leading-relaxed">
               1-click scoring keypad with legal ball tracking, automatic strike rotation on odd runs, over detection, and DRS review animations.
             </p>
           </div>
 
-          {/* Card 4 */}
-          <div className="p-7 rounded-3xl bg-white/90 backdrop-blur-xl border border-slate-200/80 hover:border-blue-300 shadow-[0_15px_35px_rgba(2,132,199,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_45px_rgba(2,132,199,0.12)] transition flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600 shadow-sm">
-              <Trophy className="w-6 h-6" />
+          {/* Card 4 - Tournament & Squad */}
+          <div className="p-7 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-200/80 hover:border-amber-400 shadow-[0_15px_35px_rgba(2,132,199,0.06)] hover:shadow-[0_22px_45px_rgba(2,132,199,0.15)] transition-all duration-300 flex flex-col gap-4 animate-float-delayed group">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center text-amber-600 shadow-sm group-hover:scale-110 transition-transform">
+              <Trophy className="w-6 h-6 animate-icon-lively" />
             </div>
-            <h3 className="font-heading font-black text-xl text-slate-900">Tournament & Squad Manager</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-black text-xl text-slate-900">Tournament & Squad Manager</h3>
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            </div>
             <p className="text-slate-600 text-sm leading-relaxed">
               Manage complete series, teams, squads, playing XIs, tournament logos, and match schedules with manual logo uploads.
             </p>
           </div>
 
-          {/* Card 5 */}
-          <div className="p-7 rounded-3xl bg-white/90 backdrop-blur-xl border border-slate-200/80 hover:border-blue-300 shadow-[0_15px_35px_rgba(2,132,199,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_45px_rgba(2,132,199,0.12)] transition flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200/80 flex items-center justify-center text-purple-600 shadow-sm">
-              <Zap className="w-6 h-6" />
+          {/* Card 5 - Zero-Latency Sync */}
+          <div className="p-7 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-200/80 hover:border-purple-400 shadow-[0_15px_35px_rgba(2,132,199,0.06)] hover:shadow-[0_22px_45px_rgba(2,132,199,0.15)] transition-all duration-300 flex flex-col gap-4 animate-float-gentle group">
+            <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-200/80 flex items-center justify-center text-purple-600 shadow-sm group-hover:scale-110 transition-transform">
+              <Zap className="w-6 h-6 animate-icon-lively" />
             </div>
-            <h3 className="font-heading font-black text-xl text-slate-900">Zero-Latency State Sync</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-black text-xl text-slate-900">Zero-Latency State Sync</h3>
+              <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            </div>
             <p className="text-slate-600 text-sm leading-relaxed">
-              Controller actions in one window instantly reflect on the OBS overlay in real-time with zero lag, backed by Server-Sent Events.
+              Controller actions in one window instantly reflect on the OBS overlay in real-time with zero lag, backed by instant browser storage sync.
             </p>
           </div>
 
-          {/* Card 6 */}
-          <div className="p-7 rounded-3xl bg-white/90 backdrop-blur-xl border border-slate-200/80 hover:border-blue-300 shadow-[0_15px_35px_rgba(2,132,199,0.05),0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_45px_rgba(2,132,199,0.12)] transition flex flex-col gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 shadow-sm">
-              <ShieldCheck className="w-6 h-6" />
+          {/* Card 6 - Flexible SaaS Pass */}
+          <div className="p-7 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-200/80 hover:border-rose-400 shadow-[0_15px_35px_rgba(2,132,199,0.06)] hover:shadow-[0_22px_45px_rgba(2,132,199,0.15)] transition-all duration-300 flex flex-col gap-4 animate-float-delayed group">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 shadow-sm group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-6 h-6 animate-icon-lively" />
             </div>
-            <h3 className="font-heading font-black text-xl text-slate-900">Flexible SaaS Pass System</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading font-black text-xl text-slate-900">Flexible SaaS Pass System</h3>
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            </div>
             <p className="text-slate-600 text-sm leading-relaxed">
-              16 flexible plans tailored to match duration and ticket counts. Instant activation via Razorpay or bKash / Nagad.
+              16 flexible plans tailored to match duration and ticket counts. Instant activation via bKash (বিকাশ) and Nagad (নগদ).
             </p>
           </div>
         </div>
       </section>
 
-      {/* Broadcast Themes Interactive Showcase */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/50 via-white to-slate-50 border-y border-slate-200/70">
+      {/* Broadcast Themes Interactive Showcase (Each theme renders its genuine design) */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-blue-50/60 via-white to-slate-50 border-y border-slate-200/70">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-100/70 px-4 py-1.5 rounded-full border border-blue-200/80">
+            <span className="text-xs font-bold text-blue-600 uppercase tracking-widest bg-blue-100/70 px-4 py-1.5 rounded-full border border-blue-200/80 shadow-sm">
               VISUAL EXCELLENCE
             </span>
             <h2 className="font-heading font-black text-3xl sm:text-4xl text-slate-900 mt-4">
               Explore 4 TV Broadcast Themes
             </h2>
-            <p className="mt-2 text-slate-600 text-sm">
-              Each theme renders with a 100% transparent background designed to overlay directly over your live camera feed in OBS Studio or vMix.
+            <p className="mt-2 text-slate-600 text-sm max-w-xl mx-auto">
+              Every theme has its own distinctive broadcast geometry, colors, typography, and layout. Select each tab to preview the actual scoreboard graphics.
             </p>
           </div>
 
@@ -324,9 +477,9 @@ export const PublicLandingPage: React.FC = () => {
               <button
                 key={t.id}
                 onClick={() => setActiveThemeTab(t.id as any)}
-                className={`px-5 py-2.5 rounded-full font-heading font-bold text-xs sm:text-sm transition ${
+                className={`px-5 py-2.5 rounded-full font-heading font-bold text-xs sm:text-sm transition-all duration-200 ${
                   activeThemeTab === t.id
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 ring-2 ring-blue-300 scale-105'
                     : 'bg-white text-slate-700 hover:text-blue-600 border border-slate-200 shadow-sm'
                 }`}
               >
@@ -336,43 +489,29 @@ export const PublicLandingPage: React.FC = () => {
           </div>
 
           {/* Interactive Simulated Preview Box */}
-          <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 bg-white shadow-2xl p-4 sm:p-8 flex flex-col items-center">
+          <div className="relative rounded-3xl overflow-hidden border border-slate-200/90 bg-white shadow-2xl p-3 sm:p-6 flex flex-col items-center">
             {/* Mock Cricket Pitch Background */}
-            <div className="w-full h-64 sm:h-80 rounded-2xl bg-gradient-to-b from-sky-900 via-slate-900 to-emerald-950 relative flex items-center justify-center overflow-hidden border border-slate-800">
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]" />
-              <div className="absolute top-4 left-4 bg-red-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded flex items-center gap-1.5 shadow">
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                <span>LIVE OBS BROADCAST FEED</span>
+            <div className="w-full h-72 sm:h-96 rounded-2xl bg-[url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center relative flex flex-col justify-between overflow-hidden border border-slate-800 p-4 shadow-inner">
+              <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[0.5px] pointer-events-none" />
+
+              {/* Top Header Badge */}
+              <div className="relative z-10 flex items-center justify-between w-full">
+                <div className="bg-red-600 text-white font-mono font-bold text-xs px-3 py-1 rounded-full flex items-center gap-1.5 shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                  <span>LIVE OBS BROADCAST FEED</span>
+                </div>
+                <div className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white font-mono text-xs font-bold">
+                  1080p 60FPS TRANSPARENT
+                </div>
               </div>
 
-              {/* Bottom Simulated Overlay Strip */}
-              <div className="absolute bottom-4 left-4 right-4 max-w-4xl mx-auto rounded-2xl bg-slate-950/95 border border-slate-700/80 p-3 sm:p-4 shadow-2xl flex items-center justify-between backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-600 border border-blue-400 flex items-center justify-center font-black text-white text-xs">
-                    IND
-                  </div>
-                  <div className="text-left">
-                    <span className="text-xs text-slate-400 font-mono block">INDIA vs PAKISTAN</span>
-                    <span className="font-heading font-black text-xl sm:text-2xl text-white">
-                      184 / 3 <span className="text-xs text-cyan-400 font-mono">(17.4 OV)</span>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-4 text-xs font-mono">
-                  <div className="text-right">
-                    <span className="text-yellow-400 font-bold">V. Kohli* 78 (44)</span>
-                    <span className="text-slate-400 block">S. Yadav 34 (16)</span>
-                  </div>
-                  <div className="h-8 w-px bg-slate-800" />
-                  <div className="text-left">
-                    <span className="text-slate-300">Shaheen Afridi</span>
-                    <span className="text-cyan-400 block font-bold">3.4-0-31-2</span>
-                  </div>
-                </div>
-
-                <div className="px-3 py-1 rounded-lg bg-blue-600/30 border border-blue-500/50 text-blue-300 text-xs font-bold uppercase">
-                  {activeThemeTab.toUpperCase()}
+              {/* Bottom Responsive Scaled Overlay Theme */}
+              <div className="relative z-10 w-full flex justify-center items-end overflow-hidden pb-1">
+                <div className="w-[1240px] shrink-0 transform scale-[0.34] xs:scale-[0.44] sm:scale-[0.60] md:scale-[0.74] lg:scale-[0.86] xl:scale-[0.96] origin-bottom transition-all duration-300">
+                  {activeThemeTab === 'cricpic' && <CricPicTheme match={demoMatch} />}
+                  {activeThemeTab === 'asiacup' && <AsiaCupTheme match={demoMatch} />}
+                  {activeThemeTab === 'cwc23' && <CWC23Theme match={demoMatch} />}
+                  {activeThemeTab === 'iplneon' && <IPLNeonTheme match={demoMatch} />}
                 </div>
               </div>
             </div>
@@ -408,7 +547,7 @@ export const PublicLandingPage: React.FC = () => {
             </div>
             <h3 className="font-heading font-black text-xl text-slate-900">Select a Plan & Sign Up</h3>
             <p className="text-slate-600 text-sm leading-relaxed">
-              Pick from 16 flexible plans starting from ₹250 (1 Day). Instantly create an account and unlock your tickets.
+              Pick from 16 flexible plans starting from ৳99 (1 Day Pass). Instantly create an account and unlock your tickets.
             </p>
           </div>
 
@@ -473,7 +612,7 @@ export const PublicLandingPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-baseline gap-1 my-1">
-                  <span className="font-score text-4xl font-black text-slate-900">₹{p.price}</span>
+                  <span className="font-score text-4xl font-black text-slate-900">৳{p.price}</span>
                   <span className="text-xs text-slate-500 font-mono">/ total</span>
                 </div>
 
