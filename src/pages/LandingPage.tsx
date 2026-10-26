@@ -34,8 +34,17 @@ export const LandingPage: React.FC = () => {
             <span>OBS Studio & vMix Transparent Broadcast System</span>
           </div>
 
+          {/* Logo Brand Banner */}
+          <div className="mt-8 mb-4">
+            <img
+              src="/logo.png"
+              alt="IconicScorer"
+              className="h-16 sm:h-24 md:h-28 w-auto object-contain drop-shadow-[0_0_25px_rgba(236,72,153,0.4)] animate-in fade-in duration-300"
+            />
+          </div>
+
           {/* Title */}
-          <h1 className="mt-6 font-heading font-black text-4xl sm:text-6xl md:text-7xl tracking-tight text-white max-w-4xl leading-none">
+          <h1 className="mt-2 font-heading font-black text-3xl sm:text-5xl md:text-6xl tracking-tight text-white max-w-4xl leading-tight">
             LIVE CRICKET SCOREBOARD <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300">
               CONTROLLER & OVERLAY

@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { Radio, Trophy, Link as LinkIcon, Tv, SlidersHorizontal, Activity } from 'lucide-react';
 import { useCricket } from '../context/CricketContext';
 
+import logoImg from '../assets/logo.png';
+
 export const Navbar: React.FC = () => {
   const { activeMatch, isSyncing } = useCricket();
 
@@ -11,24 +13,14 @@ export const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand */}
         <NavLink to="/" className="flex items-center gap-3 group">
-          <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-fuchsia-500 p-0.5 shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition">
-            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Radio className="w-5 h-5 text-cyan-400 animate-pulse" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-heading font-black text-xl tracking-tight text-white">
-                ICONIC<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-400">SCORER</span>
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                v2.5
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block font-medium">
-              OBS / vMix Broadcast Overlay & Controller
-            </p>
-          </div>
+          <img
+            src={logoImg}
+            alt="IconicScorer"
+            className="h-9 sm:h-10 w-auto object-contain hover:scale-105 transition-transform drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+          />
+          <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hidden sm:inline-block">
+            v2.5
+          </span>
         </NavLink>
 
         {/* Center Nav Links */}
