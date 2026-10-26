@@ -290,14 +290,14 @@ export const ControllerPage: React.FC = () => {
         {/* =========================================================
             1. TOP STATUS BAR (Exact Replica)
         ========================================================= */}
-        <div className="w-full flex items-center justify-between text-xs sm:text-sm font-semibold">
+        <div className="w-full flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 text-xs sm:text-sm font-semibold">
           {/* Left Cyan Pill */}
           <div className="px-3 py-1 rounded-full bg-cyan-400 text-slate-950 font-bold shadow-sm">
             Storage: {storageInfo.usedKb}/{storageInfo.maxKb} kb
           </div>
 
           {/* Center Links */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-slate-300 font-bold">Match Scoreboard</span>
             <Link
               to="/links"

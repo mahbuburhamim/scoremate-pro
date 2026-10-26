@@ -30,7 +30,11 @@ const AppLayout: React.FC = () => {
   const isOverlay = location.pathname.startsWith('/overlay');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+    <div
+      className={`min-h-screen flex flex-col font-sans selection:bg-blue-600 selection:text-white ${
+        isOverlay ? 'bg-transparent' : 'bg-[#f8fafc] text-slate-900'
+      }`}
+    >
       {!isOverlay && <Navbar />}
       {!isOverlay && <AuthModal />}
 

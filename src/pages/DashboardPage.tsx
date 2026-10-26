@@ -30,46 +30,49 @@ export const DashboardPage: React.FC = () => {
   const activeInning = activeMatch.innings[activeMatch.activeInningNumber - 1];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[350px] bg-gradient-to-b from-sky-200/25 via-blue-100/15 to-transparent blur-3xl pointer-events-none rounded-full" />
+
       {/* Top Subscriber Welcome Banner */}
-      <section className="bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border-b border-slate-800 py-6 px-4 sm:px-6 lg:px-8">
+      <section className="bg-white/80 border-b border-slate-200/80 backdrop-blur-xl py-6 px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4 text-left">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-fuchsia-600 p-0.5 shadow-lg">
-              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-white">
-                <User className="w-7 h-7 text-cyan-400" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-500 to-sky-400 p-0.5 shadow-md shadow-blue-500/15">
+              <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center text-blue-600">
+                <User className="w-7 h-7 text-blue-600" />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-heading font-black text-xl sm:text-2xl text-white">
+                <h1 className="font-heading font-black text-xl sm:text-2xl text-slate-900">
                   Welcome, {user?.name || 'Broadcaster'}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-600 to-pink-600 text-[10px] font-black uppercase text-white tracking-wider shadow">
+                <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 text-[10px] font-black uppercase text-white tracking-wider shadow-sm">
                   PRO SUBSCRIBER
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Plan: <strong className="text-white">{user?.planName || 'Monthly v1'}</strong> • Valid until: <strong className="text-slate-300">{user?.planExpiryDate || 'Active'}</strong>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Plan: <strong className="text-slate-800">{user?.planName || 'Monthly v1'}</strong> • Valid until: <strong className="text-slate-700">{user?.planExpiryDate || 'Active'}</strong>
               </p>
             </div>
           </div>
 
           {/* Ticket Balance & Upgrade */}
           <div className="flex items-center gap-3">
-            <div className="px-4 py-2 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-2 text-xs">
-              <Ticket className="w-4 h-4 text-amber-400" />
-              <span className="text-slate-400">Match Tickets:</span>
-              <span className="font-mono font-bold text-white text-sm">
+            <div className="px-4 py-2 rounded-2xl bg-white border border-slate-200 flex items-center gap-2 text-xs shadow-sm">
+              <Ticket className="w-4 h-4 text-amber-500" />
+              <span className="text-slate-500">Match Tickets:</span>
+              <span className="font-mono font-bold text-slate-900 text-sm">
                 {user?.ticketsRemaining ?? 15}
               </span>
             </div>
 
             <Link
               to="/payment"
-              className="px-4 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-fuchsia-300 border border-fuchsia-500/30 transition flex items-center gap-1.5"
+              className="px-4 py-2 rounded-full bg-sky-50 hover:bg-sky-100 text-xs font-bold text-blue-700 border border-sky-200 transition flex items-center gap-1.5 shadow-sm"
             >
-              <Sparkles className="w-3.5 h-3.5 text-fuchsia-400" />
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
               <span>Add Tickets</span>
             </Link>
           </div>
@@ -77,23 +80,23 @@ export const DashboardPage: React.FC = () => {
       </section>
 
       {/* Main Broadcast Hub */}
-      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+      <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8 relative z-10">
         {/* Quick Launch Action Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to={`/controller/${activeMatch.id}`}
-            className="group p-5 rounded-3xl bg-gradient-to-br from-cyan-950/40 via-slate-900 to-slate-900 border border-cyan-500/40 hover:border-cyan-400 flex flex-col gap-3 shadow-xl transition active:scale-[0.98]"
+            className="group p-5 rounded-3xl bg-white/90 border border-slate-200/80 hover:border-blue-400 hover:shadow-[0_15px_30px_rgba(2,132,199,0.1)] flex flex-col gap-3 shadow-sm transition active:scale-[0.98]"
           >
-            <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition">
+            <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition shadow-sm">
               <SlidersHorizontal className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-heading font-black text-lg text-white">Match Scorer Controller</h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <h3 className="font-heading font-black text-lg text-slate-900">Match Scorer Controller</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 Real-time scoring, wicket management, player cropper, and undo history.
               </p>
             </div>
-            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-cyan-400 group-hover:translate-x-1 transition">
+            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-blue-600 group-hover:translate-x-1 transition">
               <span>Launch Controller</span>
               <ChevronRight className="w-4 h-4" />
             </div>
@@ -103,21 +106,21 @@ export const DashboardPage: React.FC = () => {
             href={`/overlay/${activeMatch.id}?theme=cricpic`}
             target="_blank"
             rel="noopener noreferrer"
-            className="group p-5 rounded-3xl bg-gradient-to-br from-red-950/40 via-slate-900 to-slate-900 border border-red-500/40 hover:border-red-400 flex flex-col gap-3 shadow-xl transition active:scale-[0.98]"
+            className="group p-5 rounded-3xl bg-white/90 border border-slate-200/80 hover:border-rose-400 hover:shadow-[0_15px_30px_rgba(244,63,94,0.1)] flex flex-col gap-3 shadow-sm transition active:scale-[0.98]"
           >
-            <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:scale-110 transition">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 group-hover:scale-110 transition shadow-sm">
               <Tv className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-heading font-black text-lg text-white">OBS Overlay Feed</h3>
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <h3 className="font-heading font-black text-lg text-slate-900">OBS Overlay Feed</h3>
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 1920x1080 transparent alpha browser source ready for OBS Studio & vMix.
               </p>
             </div>
-            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-red-400 group-hover:translate-x-1 transition">
+            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-rose-600 group-hover:translate-x-1 transition">
               <span>Open in New Tab</span>
               <ExternalLink className="w-4 h-4 ml-1" />
             </div>
@@ -125,18 +128,18 @@ export const DashboardPage: React.FC = () => {
 
           <Link
             to="/links"
-            className="group p-5 rounded-3xl bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/40 hover:border-amber-400 flex flex-col gap-3 shadow-xl transition active:scale-[0.98]"
+            className="group p-5 rounded-3xl bg-white/90 border border-slate-200/80 hover:border-amber-400 hover:shadow-[0_15px_30px_rgba(245,158,11,0.1)] flex flex-col gap-3 shadow-sm transition active:scale-[0.98]"
           >
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 group-hover:scale-110 transition shadow-sm">
               <LinkIcon className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-heading font-black text-lg text-white">Scoreboard Links</h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <h3 className="font-heading font-black text-lg text-slate-900">Scoreboard Links</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 Copy direct overlay URLs for all 4 themes (CricPic, Asia Cup, CWC, IPL).
               </p>
             </div>
-            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-amber-400 group-hover:translate-x-1 transition">
+            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-amber-600 group-hover:translate-x-1 transition">
               <span>Get Overlay URLs</span>
               <ChevronRight className="w-4 h-4" />
             </div>
@@ -144,18 +147,18 @@ export const DashboardPage: React.FC = () => {
 
           <Link
             to="/tournament"
-            className="group p-5 rounded-3xl bg-gradient-to-br from-fuchsia-950/40 via-slate-900 to-slate-900 border border-fuchsia-500/40 hover:border-fuchsia-400 flex flex-col gap-3 shadow-xl transition active:scale-[0.98]"
+            className="group p-5 rounded-3xl bg-white/90 border border-slate-200/80 hover:border-purple-400 hover:shadow-[0_15px_30px_rgba(168,85,247,0.1)] flex flex-col gap-3 shadow-sm transition active:scale-[0.98]"
           >
-            <div className="w-12 h-12 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/30 flex items-center justify-center text-fuchsia-400 group-hover:scale-110 transition">
+            <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition shadow-sm">
               <Trophy className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-heading font-black text-lg text-white">Tournaments & Squads</h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <h3 className="font-heading font-black text-lg text-slate-900">Tournaments & Squads</h3>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                 Create new tournaments, configure team squads, playing XIs, and overs.
               </p>
             </div>
-            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-fuchsia-400 group-hover:translate-x-1 transition">
+            <div className="mt-auto pt-2 flex items-center text-xs font-bold text-purple-600 group-hover:translate-x-1 transition">
               <span>Manage Tournaments</span>
               <ChevronRight className="w-4 h-4" />
             </div>
@@ -163,25 +166,25 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* Active Match Card */}
-        <div className="w-full rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-2xl backdrop-blur-md flex flex-col gap-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+        <div className="w-full rounded-3xl bg-white/95 border border-slate-200/90 p-6 sm:p-8 shadow-[0_20px_50px_rgba(2,132,199,0.06)] backdrop-blur-xl flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-4">
             <div>
-              <span className="flex items-center gap-2 font-bold text-emerald-400 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+              <span className="flex items-center gap-2 font-bold text-emerald-600 text-xs">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                 CURRENT ACTIVE LIVE MATCH
               </span>
-              <h2 className="font-heading font-black text-2xl text-white mt-1">
+              <h2 className="font-heading font-black text-2xl text-slate-900 mt-1">
                 {activeMatch.team1.name} vs {activeMatch.team2.name}
               </h2>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-xl bg-slate-800 text-xs text-slate-300 font-mono">
+              <span className="px-3 py-1 rounded-full bg-slate-100 text-xs text-slate-600 font-mono font-semibold">
                 {activeMatch.venue || 'Stadium'} • {activeMatch.matchNo}
               </span>
               <Link
                 to={`/controller/${activeMatch.id}`}
-                className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 transition"
+                className="px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 transition shadow-md shadow-blue-500/20"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Open Controller</span>
@@ -192,71 +195,71 @@ export const DashboardPage: React.FC = () => {
           {/* Teams & Score Box */}
           <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6 py-2">
             {/* Team 1 */}
-            <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center font-heading font-black text-blue-400 text-lg">
+            <div className="flex items-center gap-4 bg-slate-50/90 p-4 rounded-2xl border border-slate-200/80">
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 border border-blue-200 flex items-center justify-center font-heading font-black text-blue-700 text-lg shadow-sm">
                 {activeMatch.team1.shortName || activeMatch.team1.name.slice(0, 3).toUpperCase()}
               </div>
               <div>
-                <span className="font-heading font-black text-xl text-white block">
+                <span className="font-heading font-black text-xl text-slate-900 block">
                   {activeMatch.team1.name}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-xs text-slate-500 font-mono">
                   {activeMatch.team1.players.length} Players Squad
                 </span>
               </div>
             </div>
 
             {/* Score Center */}
-            <div className="flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-slate-950 border border-cyan-500/30">
-              <span className="text-[10px] font-mono font-bold text-cyan-400 uppercase tracking-widest mb-1">
+            <div className="flex flex-col items-center justify-center text-center p-4 rounded-2xl bg-sky-50/80 border border-sky-100 shadow-sm">
+              <span className="text-[10px] font-mono font-bold text-blue-600 uppercase tracking-widest mb-1">
                 INNINGS {activeMatch.activeInningNumber}
               </span>
-              <div className="font-score text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 leading-none">
+              <div className="font-score text-5xl sm:text-6xl font-black text-blue-600 leading-none">
                 {activeInning.totalRuns} - {activeInning.wickets}
               </div>
-              <span className="text-xs font-mono font-bold text-slate-300 mt-2">
+              <span className="text-xs font-mono font-bold text-slate-600 mt-2">
                 {activeInning.oversDisplay} / {activeMatch.overs} OVERS
               </span>
             </div>
 
             {/* Team 2 */}
-            <div className="flex items-center gap-4 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center font-heading font-black text-emerald-400 text-lg">
+            <div className="flex items-center gap-4 bg-slate-50/90 p-4 rounded-2xl border border-slate-200/80">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 border border-emerald-200 flex items-center justify-center font-heading font-black text-emerald-700 text-lg shadow-sm">
                 {activeMatch.team2.shortName || activeMatch.team2.name.slice(0, 3).toUpperCase()}
               </div>
               <div>
-                <span className="font-heading font-black text-xl text-white block">
+                <span className="font-heading font-black text-xl text-slate-900 block">
                   {activeMatch.team2.name}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-xs text-slate-500 font-mono">
                   {activeMatch.team2.players.length} Players Squad
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
-            <span>Toss Decision: <strong className="text-white">{activeMatch.tossDecision.toUpperCase()}</strong></span>
-            <span>Overs Limit: <strong className="text-white">{activeMatch.overs} Overs</strong></span>
-            <span>DRS Reviews Available: <strong className="text-emerald-400">Yes</strong></span>
+          <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200/80">
+            <span>Toss Decision: <strong className="text-slate-800">{activeMatch.tossDecision.toUpperCase()}</strong></span>
+            <span>Overs Limit: <strong className="text-slate-800">{activeMatch.overs} Overs</strong></span>
+            <span>DRS Reviews Available: <strong className="text-emerald-600">Yes</strong></span>
           </div>
         </div>
 
-        {/* Broadcast Workflow & Compatibility Section (Exact Replica from Screenshot) */}
-        <div className="mt-8 pt-10 border-t border-slate-800/80 flex flex-col gap-10">
+        {/* Broadcast Workflow & Compatibility Section */}
+        <div className="mt-8 pt-10 border-t border-slate-200/80 flex flex-col gap-10">
           {/* Top: FITS YOUR BROADCAST WORKFLOW */}
           <div className="flex flex-col text-left">
-            <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
+            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-widest font-mono">
               FITS YOUR BROADCAST WORKFLOW
             </span>
-            <h2 className="text-2xl sm:text-3xl text-white font-medium tracking-tight mt-1.5 font-sans">
+            <h2 className="text-2xl sm:text-3xl text-slate-900 font-bold tracking-tight mt-1.5 font-sans">
               Bring your scoreboard into the tools you use.
             </h2>
 
             {/* 4 Tool Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
               {/* 1. vMix */}
-              <div className="p-4 rounded-2xl bg-[#090d16] border border-slate-800 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-3.5 shadow-sm transition">
                 <div className="w-9 h-9 rounded-lg bg-[#001733] border border-blue-500/30 p-1.5 flex items-center justify-center shrink-0 shadow">
                   <div className="grid grid-cols-3 gap-0.5 w-full h-full">
                     <span className="bg-sky-400 rounded-[1px]" />
@@ -270,13 +273,13 @@ export const DashboardPage: React.FC = () => {
                     <span className="bg-fuchsia-500 rounded-[1px]" />
                   </div>
                 </div>
-                <span className="font-heading font-black text-lg text-white tracking-wide">
+                <span className="font-heading font-black text-lg text-slate-900 tracking-wide">
                   vMix
                 </span>
               </div>
 
               {/* 2. OBS */}
-              <div className="p-4 rounded-2xl bg-[#090d16] border border-slate-800 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-3.5 shadow-sm transition">
                 <div className="w-9 h-9 rounded-lg bg-black border border-slate-700 p-1.5 flex items-center justify-center shrink-0 shadow">
                   <svg viewBox="0 0 100 100" className="w-full h-full fill-white" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="50" cy="50" r="45" fill="none" stroke="white" strokeWidth="6" />
@@ -286,13 +289,13 @@ export const DashboardPage: React.FC = () => {
                     <circle cx="50" cy="50" r="8" fill="white" />
                   </svg>
                 </div>
-                <span className="font-heading font-black text-lg text-white tracking-wide">
-                  OBS
+                <span className="font-heading font-black text-lg text-slate-900 tracking-wide">
+                  OBS Studio
                 </span>
               </div>
 
               {/* 3. PRISM Live Studio */}
-              <div className="p-4 rounded-2xl bg-[#090d16] border border-slate-800 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-3.5 shadow-sm transition">
                 <div className="w-9 h-9 rounded-lg bg-[#0e071e] border border-purple-500/30 p-1 flex items-center justify-center shrink-0 shadow">
                   <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
                     <defs>
@@ -307,13 +310,13 @@ export const DashboardPage: React.FC = () => {
                     <polygon points="50,48 62,69 38,69" fill="url(#dashPrismGrad)" opacity="0.9" />
                   </svg>
                 </div>
-                <span className="font-heading font-black text-lg text-white tracking-wide">
+                <span className="font-heading font-black text-lg text-slate-900 tracking-wide">
                   PRISM Live Studio
                 </span>
               </div>
 
               {/* 4. CameraFi Live */}
-              <div className="p-4 rounded-2xl bg-[#090d16] border border-slate-800 hover:border-slate-700 flex items-center gap-3.5 shadow-lg transition">
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-3.5 shadow-sm transition">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-[#e11d48] to-[#fb7185] p-1 flex flex-col items-center justify-center shrink-0 shadow">
                   <div className="flex items-center gap-0.5 text-[7px] font-black text-white leading-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
@@ -323,7 +326,7 @@ export const DashboardPage: React.FC = () => {
                     <path d="M4 6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H4zm14 2.8 4-2.4v11.2l-4-2.4V8.8z" />
                   </svg>
                 </div>
-                <span className="font-heading font-black text-lg text-white tracking-wide">
+                <span className="font-heading font-black text-lg text-slate-900 tracking-wide">
                   CameraFi Live
                 </span>
               </div>
@@ -331,22 +334,22 @@ export const DashboardPage: React.FC = () => {
           </div>
 
           {/* Bottom: YOUR MATCH. YOUR BROADCAST. */}
-          <div className="pt-8 border-t border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div className="pt-8 border-t border-slate-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex flex-col text-left">
-              <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-widest font-mono">
+              <span className="text-[11px] font-bold text-blue-600 uppercase tracking-widest font-mono">
                 YOUR MATCH. YOUR BROADCAST.
               </span>
-              <h3 className="text-2xl sm:text-3xl text-white font-medium tracking-tight mt-1.5 font-sans">
+              <h3 className="text-2xl sm:text-3xl text-slate-900 font-bold tracking-tight mt-1.5 font-sans">
                 Make every over part of the show.
               </h3>
-              <p className="text-sm text-slate-400 mt-1.5 font-normal">
+              <p className="text-sm text-slate-500 mt-1.5 font-normal">
                 Create a tournament, score the match, and bring the live board into your stream.
               </p>
             </div>
 
             <Link
               to="/tournament"
-              className="px-6 py-3.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-heading font-black text-sm flex items-center gap-2 shadow-lg shadow-cyan-400/25 active:scale-95 transition shrink-0"
+              className="px-6 py-3.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-sm flex items-center gap-2 shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] active:scale-95 transition shrink-0"
             >
               <span>Create a tournament</span>
               <ArrowRight className="w-4 h-4" />

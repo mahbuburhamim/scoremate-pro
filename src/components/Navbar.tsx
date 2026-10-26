@@ -1,39 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Radio, Trophy, Link as LinkIcon, Tv, SlidersHorizontal, Activity, LogOut, User as UserIcon, Ticket, Sparkles } from 'lucide-react';
+import {
+  SlidersHorizontal,
+  LogOut,
+  Ticket,
+  Menu,
+  X,
+  ArrowRight,
+  ShieldCheck,
+  User,
+  Sparkles,
+  Trophy,
+  Link as LinkIcon,
+  Phone,
+  HelpCircle,
+} from 'lucide-react';
 import { useCricket } from '../context/CricketContext';
 import { useAuth } from '../context/AuthContext';
 import logoImg from '../assets/logo.png';
 
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
-  const { activeMatch, isSyncing } = useCricket();
+  const { activeMatch } = useCricket();
   const { user, isAuthenticated, hasActiveSubscription, openAuthModal, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
+    setMobileMenuOpen(false);
     navigate('/');
   };
 
+  const closeMenu = () => setMobileMenuOpen(false);
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-[#0c0a14]/95 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full bg-white/85 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_4px_25px_rgba(0,0,0,0.03)] transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         {/* Brand Logo on Left */}
-        <NavLink to={hasActiveSubscription ? "/dashboard" : "/"} className="flex items-center gap-3 group py-1">
+        <NavLink
+          to={hasActiveSubscription ? '/dashboard' : '/'}
+          onClick={closeMenu}
+          className="flex items-center gap-3 group py-1 shrink-0"
+        >
           <img
             src={logoImg}
             alt="IconicScorer"
-            className="h-12 sm:h-14 md:h-16 w-auto max-w-[200px] sm:max-w-[260px] object-contain hover:scale-105 transition-transform drop-shadow-[0_0_15px_rgba(6,182,212,0.45)]"
+            className="h-12 sm:h-14 md:h-16 w-auto max-w-[180px] sm:max-w-[240px] object-contain transition-transform group-hover:scale-105"
           />
         </NavLink>
 
-        {/* Center Nav Links - matches user's screenshot layout */}
-        <nav className="flex items-center gap-2 sm:gap-4 md:gap-6 text-sm font-semibold">
+        {/* Desktop Nav Links (Hidden on mobile) */}
+        <nav className="hidden md:flex items-center gap-5 lg:gap-7 text-sm font-semibold">
           <NavLink
-            to={hasActiveSubscription ? "/dashboard" : "/"}
+            to={hasActiveSubscription ? '/dashboard' : '/'}
             end
             className={({ isActive }) =>
-              `transition hover:text-white ${isActive ? 'text-white font-bold' : 'text-slate-300'}`
+              `transition font-medium ${
+                isActive ? 'text-blue-600 font-bold' : 'text-slate-600 hover:text-blue-600'
+              }`
             }
           >
             Home
@@ -42,20 +66,22 @@ export const Navbar: React.FC = () => {
           <NavLink
             to="/tournament"
             className={({ isActive }) =>
-              `transition hover:text-white ${isActive ? 'text-white font-bold' : 'text-slate-300'}`
+              `transition font-medium ${
+                isActive ? 'text-blue-600 font-bold' : 'text-slate-600 hover:text-blue-600'
+              }`
             }
           >
             Tournament
           </NavLink>
 
-          {/* Payment Pill with border box (exact match from user reference image) */}
+          {/* Payment Pill matching reference */}
           <NavLink
             to="/payment"
             className={({ isActive }) =>
-              `px-3.5 py-1.5 rounded-lg border transition ${
+              `px-4 py-1.5 rounded-full border transition font-medium text-xs ${
                 isActive
-                  ? 'border-white text-white font-bold bg-white/5'
-                  : 'border-slate-400/80 text-slate-200 hover:border-white hover:text-white'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-bold shadow-sm'
+                  : 'border-slate-300/90 text-slate-700 hover:border-blue-400 hover:text-blue-600 hover:bg-slate-50'
               }`
             }
           >
@@ -65,7 +91,9 @@ export const Navbar: React.FC = () => {
           <NavLink
             to="/contact"
             className={({ isActive }) =>
-              `transition hover:text-white ${isActive ? 'text-white font-bold' : 'text-slate-300'}`
+              `transition font-medium ${
+                isActive ? 'text-blue-600 font-bold' : 'text-slate-600 hover:text-blue-600'
+              }`
             }
           >
             Contact
@@ -77,7 +105,9 @@ export const Navbar: React.FC = () => {
               <NavLink
                 to="/links"
                 className={({ isActive }) =>
-                  `hidden lg:inline transition hover:text-white ${isActive ? 'text-white font-bold' : 'text-slate-300'}`
+                  `transition font-medium ${
+                    isActive ? 'text-blue-600 font-bold' : 'text-slate-600 hover:text-blue-600'
+                  }`
                 }
               >
                 Scoreboard Links
@@ -86,8 +116,8 @@ export const Navbar: React.FC = () => {
               <NavLink
                 to={`/controller/${activeMatch.id}`}
                 className={({ isActive }) =>
-                  `hidden sm:flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-bold ${
-                    isActive ? 'underline' : ''
+                  `flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-200 hover:bg-blue-100 transition ${
+                    isActive ? 'ring-2 ring-blue-400/40' : ''
                   }`
                 }
               >
@@ -97,36 +127,36 @@ export const Navbar: React.FC = () => {
             </>
           )}
 
-          {/* Create Account link for unauthenticated visitors (green accent from screenshot) */}
+          {/* Create Account link for unauthenticated visitors */}
           {!isAuthenticated && (
             <button
               onClick={() => openAuthModal('signup')}
-              className="text-emerald-400 hover:text-emerald-300 font-bold transition hidden sm:inline"
+              className="text-slate-600 hover:text-blue-600 font-semibold transition"
             >
               Create Account
             </button>
           )}
         </nav>
 
-        {/* Right Actions: Log in / User Profile */}
-        <div className="flex items-center gap-3">
+        {/* Right Actions: Desktop */}
+        <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-3">
               {/* Ticket Pill */}
               <div
                 title="Remaining Match Tickets"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs text-amber-400 font-mono font-bold"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-mono font-bold shadow-sm"
               >
-                <Ticket className="w-3.5 h-3.5" />
-                <span>{user?.ticketsRemaining ?? 15}</span>
+                <Ticket className="w-3.5 h-3.5 text-amber-600" />
+                <span>{user?.ticketsRemaining ?? 15} Tickets</span>
               </div>
 
-              {/* User Dropdown / Name */}
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white shadow">
+              {/* User Avatar */}
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-xs font-bold text-white shadow-sm">
                   {user?.name?.slice(0, 1).toUpperCase() || 'U'}
                 </div>
-                <span className="hidden md:inline text-xs font-bold text-slate-200">
+                <span className="text-xs font-bold text-slate-700 max-w-[120px] truncate">
                   {user?.name?.split(' ')[0]}
                 </span>
               </div>
@@ -135,24 +165,182 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={handleLogout}
                 title="Log Out"
-                className="p-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-slate-800 transition"
+                className="p-2 rounded-full text-slate-500 hover:text-red-600 hover:bg-red-50 transition"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              {/* Log in Button - Blue Pill (exact match from user reference image) */}
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => openAuthModal('login')}
-                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-heading font-black text-sm shadow-md shadow-blue-600/30 active:scale-95 transition cursor-pointer"
+                className="px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-heading font-black text-sm shadow-[0_8px_20px_rgba(37,99,235,0.35)] active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
               >
-                Log in
+                <span>Log in</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
         </div>
+
+        {/* Mobile Hamburger Button */}
+        <div className="flex md:hidden items-center gap-2">
+          {!isAuthenticated && (
+            <button
+              onClick={() => openAuthModal('login')}
+              className="px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold text-xs shadow-md"
+            >
+              Log in
+            </button>
+          )}
+
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Slide-down Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-white/95 backdrop-blur-2xl border-b border-slate-200 px-5 py-6 flex flex-col gap-4 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+          {isAuthenticated && (
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                  {user?.name?.slice(0, 1).toUpperCase() || 'U'}
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900 text-sm block">{user?.name}</span>
+                  <span className="text-[11px] text-slate-500">{user?.planName || 'Active Subscriber'}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs text-amber-700 font-mono font-bold">
+                <Ticket className="w-3.5 h-3.5 text-amber-600" />
+                <span>{user?.ticketsRemaining ?? 15}</span>
+              </div>
+            </div>
+          )}
+
+          <nav className="flex flex-col gap-2 font-medium text-sm text-slate-700">
+            <NavLink
+              to={hasActiveSubscription ? '/dashboard' : '/'}
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `p-3 rounded-xl transition ${
+                  isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
+                }`
+              }
+            >
+              Home
+            </NavLink>
+
+            <NavLink
+              to="/tournament"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `p-3 rounded-xl transition ${
+                  isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
+                }`
+              }
+            >
+              Tournament Manager
+            </NavLink>
+
+            <NavLink
+              to="/payment"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `p-3 rounded-xl transition flex items-center justify-between ${
+                  isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
+                }`
+              }
+            >
+              <span>Payment Plans</span>
+              <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
+                16 Plans
+              </span>
+            </NavLink>
+
+            <NavLink
+              to="/contact"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `p-3 rounded-xl transition ${
+                  isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
+                }`
+              }
+            >
+              Contact Support
+            </NavLink>
+
+            {hasActiveSubscription && (
+              <>
+                <NavLink
+                  to="/links"
+                  onClick={closeMenu}
+                  className={({ isActive }) =>
+                    `p-3 rounded-xl transition ${
+                      isActive ? 'bg-blue-50 text-blue-600 font-bold' : 'hover:bg-slate-50'
+                    }`
+                  }
+                >
+                  Scoreboard Links
+                </NavLink>
+
+                <NavLink
+                  to={`/controller/${activeMatch.id}`}
+                  onClick={closeMenu}
+                  className="p-3 rounded-xl bg-blue-600 text-white font-bold flex items-center justify-between shadow-md"
+                >
+                  <span className="flex items-center gap-2">
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span>Open Live Scorer Controller</span>
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </NavLink>
+              </>
+            )}
+          </nav>
+
+          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            {!isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => {
+                    closeMenu();
+                    openAuthModal('signup');
+                  }}
+                  className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm text-center transition"
+                >
+                  Create Account
+                </button>
+                <button
+                  onClick={() => {
+                    closeMenu();
+                    openAuthModal('login');
+                  }}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-white font-heading font-black text-sm text-center shadow-md active:scale-95 transition"
+                >
+                  Log In
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleLogout}
+                className="w-full py-2.5 rounded-xl text-red-600 hover:bg-red-50 text-sm font-bold flex items-center justify-center gap-2 transition"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 };

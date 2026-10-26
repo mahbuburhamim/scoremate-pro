@@ -78,35 +78,38 @@ export const LinksPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto flex flex-col gap-8">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-sky-200/30 via-blue-100/20 to-transparent blur-3xl pointer-events-none rounded-full" />
+
+      <div className="max-w-6xl mx-auto flex flex-col gap-8 relative z-10">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200/80">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-cyan-400 text-slate-950 font-black text-xs uppercase tracking-wider">
+              <span className="px-3 py-1 rounded-full bg-sky-100 text-blue-700 font-black text-xs uppercase tracking-wider">
                 BROADCAST STUDIO
               </span>
-              <span className="text-slate-400 text-xs font-mono">OBS Studio & vMix Ready</span>
+              <span className="text-slate-500 text-xs font-mono">OBS Studio & vMix Ready</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-heading font-black tracking-tight text-white mt-1">
-              ALL SCOREBOARD LINKS
+            <h1 className="text-3xl sm:text-4xl font-heading font-black tracking-tight text-slate-900 mt-1">
+              <span className="text-blue-600">ALL SCOREBOARD</span> LINKS
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-slate-500 text-sm mt-1">
               Copy transparent browser source links for OBS Studio, vMix, Streamlabs, or mobile streaming apps (CameraFi Live).
             </p>
           </div>
 
           {/* Match Selector Dropdown */}
-          <div className="flex flex-col gap-1.5 bg-slate-900 border border-slate-800 p-3 rounded-2xl">
-            <label className="text-xs font-bold text-slate-400 uppercase">Select Match:</label>
+          <div className="flex flex-col gap-1.5 bg-white border border-slate-200 p-3 rounded-2xl shadow-sm">
+            <label className="text-xs font-bold text-slate-500 uppercase">Select Match:</label>
             <select
               value={selectedMatchId}
               onChange={(e) => {
                 setSelectedMatchId(e.target.value);
                 setActiveMatchId(e.target.value);
               }}
-              className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-cyan-300 font-bold focus:outline-none focus:border-cyan-400"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-blue-600 font-bold focus:outline-none focus:border-blue-500 focus:bg-white"
             >
               {matches.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -118,11 +121,11 @@ export const LinksPage: React.FC = () => {
         </div>
 
         {/* Live Mini Preview Canvas */}
-        <div className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-2xl flex flex-col gap-4">
-          <div className="flex items-center justify-between">
+        <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-5 shadow-[0_15px_35px_rgba(2,132,199,0.06)] flex flex-col gap-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-cyan-400" />
-              <h3 className="font-heading font-bold text-lg text-white">Live Preview Studio</h3>
+              <Eye className="w-5 h-5 text-blue-600" />
+              <h3 className="font-heading font-bold text-lg text-slate-900">Live Preview Studio</h3>
               <span className="text-xs font-mono text-slate-400">
                 (Simulating transparent OBS broadcast overlay)
               </span>
@@ -131,7 +134,7 @@ export const LinksPage: React.FC = () => {
               href={getOverlayUrl(previewTheme)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold shadow transition"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Full Screen Window</span>
@@ -139,8 +142,8 @@ export const LinksPage: React.FC = () => {
           </div>
 
           {/* 16:9 Frame Preview */}
-          <div className="relative w-full aspect-[16/7] rounded-2xl overflow-hidden border border-slate-800 bg-[url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center flex flex-col justify-end p-4 shadow-inner">
-            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+          <div className="relative w-full aspect-[16/7] rounded-2xl overflow-hidden border border-slate-200 bg-[url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center flex flex-col justify-end p-4 shadow-inner">
+            <div className="absolute inset-0 bg-slate-950/40 pointer-events-none" />
             <div className="relative z-10 w-full transform scale-90 sm:scale-100 origin-bottom">
               <iframe
                 title="Overlay Preview"
@@ -151,11 +154,11 @@ export const LinksPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Table of Themes (Exact CricScorer Pro Links style) */}
-        <div className="w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl">
+        {/* Table of Themes */}
+        <div className="w-full overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_15px_35px_rgba(2,132,199,0.06)]">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-slate-950 text-slate-400 font-bold uppercase tracking-wider text-[11px] border-b border-slate-800">
+              <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
                 <tr>
                   <th className="py-4 px-4 w-12 text-center">No.</th>
                   <th className="py-4 px-6">Theme Name</th>
@@ -165,7 +168,7 @@ export const LinksPage: React.FC = () => {
                   <th className="py-4 px-4 text-center">Live Preview</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80 text-slate-200">
+              <tbody className="divide-y divide-slate-100 text-slate-700">
                 {themes.map((theme) => {
                   const pcLink = getOverlayUrl(theme.id);
                   const mobileLink = getOverlayUrl(theme.id, true);
@@ -173,8 +176,8 @@ export const LinksPage: React.FC = () => {
                   return (
                     <tr
                       key={theme.id}
-                      className={`hover:bg-slate-800/50 transition ${
-                        previewTheme === theme.id ? 'bg-cyan-950/20' : ''
+                      className={`hover:bg-sky-50/40 transition ${
+                        previewTheme === theme.id ? 'bg-sky-50/70' : ''
                       }`}
                     >
                       {/* No. */}
@@ -186,20 +189,20 @@ export const LinksPage: React.FC = () => {
                       <td className="py-4 px-6">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
-                            <span className="font-heading font-black text-base text-white">
+                            <span className="font-heading font-black text-base text-slate-900">
                               {theme.name}
                             </span>
-                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30">
+                            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                               {theme.badge}
                             </span>
                           </div>
-                          <span className="text-xs text-slate-400 mt-0.5">{theme.description}</span>
+                          <span className="text-xs text-slate-500 mt-0.5">{theme.description}</span>
                         </div>
                       </td>
 
                       {/* Tier */}
                       <td className="py-4 px-4">
-                        <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold text-xs whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs whitespace-nowrap">
                           {theme.tier}
                         </span>
                       </td>
@@ -209,12 +212,12 @@ export const LinksPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleCopy(pcLink, `pc-${theme.id}`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 active:scale-95 transition"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition"
                           >
                             {copiedKey === `pc-${theme.id}` ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                              <Copy className="w-3.5 h-3.5 text-blue-600" />
                             )}
                             <span>{copiedKey === `pc-${theme.id}` ? 'Copied!' : 'Copy Link'}</span>
                           </button>
@@ -223,7 +226,7 @@ export const LinksPage: React.FC = () => {
                             href={pcLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                            className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200"
                             title="Open Link in New Tab"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
@@ -236,12 +239,12 @@ export const LinksPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleCopy(mobileLink, `cam-${theme.id}`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 active:scale-95 transition"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition"
                           >
                             {copiedKey === `cam-${theme.id}` ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <Smartphone className="w-3.5 h-3.5 text-fuchsia-400" />
+                              <Smartphone className="w-3.5 h-3.5 text-rose-600" />
                             )}
                             <span>
                               {copiedKey === `cam-${theme.id}` ? 'Copied!' : 'CameraFi Link'}
@@ -254,10 +257,10 @@ export const LinksPage: React.FC = () => {
                       <td className="py-4 px-4 text-center">
                         <button
                           onClick={() => setPreviewTheme(theme.id)}
-                          className={`px-3 py-1.5 rounded-xl font-bold text-xs uppercase tracking-wide transition ${
+                          className={`px-3 py-1.5 rounded-full font-bold text-xs uppercase tracking-wide transition ${
                             previewTheme === theme.id
-                              ? 'bg-cyan-400 text-slate-950 shadow-md ring-2 ring-cyan-400/50'
-                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-sky-300'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                           }`}
                         >
                           Preview
@@ -272,16 +275,16 @@ export const LinksPage: React.FC = () => {
         </div>
 
         {/* OBS Studio Integration Instructions Box */}
-        <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 text-xs sm:text-sm text-slate-300 space-y-2">
-          <h4 className="font-heading font-black text-base text-cyan-400 uppercase tracking-wide flex items-center gap-2">
+        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-[0_15px_35px_rgba(2,132,199,0.06)] text-xs sm:text-sm text-slate-700 space-y-2">
+          <h4 className="font-heading font-black text-base text-blue-600 uppercase tracking-wide flex items-center gap-2">
             <Monitor className="w-4 h-4" /> How to use in OBS Studio / vMix / Streamlabs:
           </h4>
-          <ol className="list-decimal list-inside space-y-1 text-slate-400">
+          <ol className="list-decimal list-inside space-y-1.5 text-slate-600 leading-relaxed">
             <li>Copy the desired theme link from the table above.</li>
-            <li>In OBS Studio, click the <strong className="text-white">+</strong> icon under Sources and choose <strong className="text-white">Browser</strong>.</li>
+            <li>In OBS Studio, click the <strong className="text-slate-900">+</strong> icon under Sources and choose <strong className="text-slate-900">Browser</strong>.</li>
             <li>Paste the copied URL into the URL field.</li>
-            <li>Set Width to <strong className="text-cyan-400">1920</strong> and Height to <strong className="text-cyan-400">1080</strong>.</li>
-            <li>Check <strong className="text-white">&quot;Shutdown source when not visible&quot;</strong> and click OK. The transparent scoreboard will appear immediately!</li>
+            <li>Set Width to <strong className="text-blue-600">1920</strong> and Height to <strong className="text-blue-600">1080</strong>.</li>
+            <li>Check <strong className="text-slate-900">&quot;Shutdown source when not visible&quot;</strong> and click OK. The transparent scoreboard will appear immediately!</li>
           </ol>
         </div>
       </div>
