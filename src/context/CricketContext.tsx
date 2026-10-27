@@ -95,12 +95,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const sanitizeMatches = useCallback((list: any[]): Match[] => {
     if (!Array.isArray(list)) return [defaultInitialMatch];
     let filtered = list.filter(isValidMatch);
-    filtered = filtered.filter(
-      (m) =>
-        m.id !== 'match-ind-aus-final' &&
-        !m.team1?.name?.toUpperCase().includes('IND') &&
-        !m.team2?.name?.toUpperCase().includes('AUS')
-    );
+    filtered = filtered.filter((m) => m.id !== 'match-ind-aus-final');
     if (filtered.length === 0) {
       filtered = [defaultInitialMatch];
     }
@@ -110,23 +105,13 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments());
   const [matches, setMatches] = useState<Match[]>(() => {
     const stored = getStoredMatches();
-    const sanitized = stored.filter(
-      (m) =>
-        m.id !== 'match-ind-aus-final' &&
-        !m.team1?.name?.toUpperCase().includes('IND') &&
-        !m.team2?.name?.toUpperCase().includes('AUS')
-    );
+    const sanitized = stored.filter((m) => m.id !== 'match-ind-aus-final');
     return sanitized.length > 0 ? sanitized : [defaultInitialMatch];
   });
   const [activeMatchId, setActiveMatchIdState] = useState<string>(() => {
     const storedId = getStoredActiveMatchId();
     const list = getStoredMatches();
-    const sanitized = list.filter(
-      (m) =>
-        m.id !== 'match-ind-aus-final' &&
-        !m.team1?.name?.toUpperCase().includes('IND') &&
-        !m.team2?.name?.toUpperCase().includes('AUS')
-    );
+    const sanitized = list.filter((m) => m.id !== 'match-ind-aus-final');
     if (storedId && sanitized.some((m) => m.id === storedId)) {
       return storedId;
     }
@@ -143,15 +128,24 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const activeMatch = isValidMatch(rawMatch) ? rawMatch : defaultInitialMatch;
 
   const activeMatchIdRef = useRef<string>(activeMatchId);
+  const lastLocalActionTimestampRef = useRef<number>(Date.now());
   useEffect(() => {
     activeMatchIdRef.current = activeMatchId;
   }, [activeMatchId]);
 
   // Sync to channel, local server, and global cloud relay
   const syncMatchState = useCallback(
-    (updatedMatches: Match[], triggerPulse = true) => {
+    (updatedMatches: Match[], triggerPulse = true, explicitActiveId?: string) => {
+      lastLocalActionTimestampRef.current = Date.now();
       const validMatches = sanitizeMatches(updatedMatches);
       if (validMatches.length === 0) return;
+
+      const currentActiveId = explicitActiveId || activeMatchIdRef.current;
+      if (explicitActiveId) {
+        setActiveMatchIdState(explicitActiveId);
+        saveActiveMatchId(explicitActiveId);
+        activeMatchIdRef.current = explicitActiveId;
+      }
 
       setMatches(validMatches);
       saveMatches(validMatches);
@@ -160,8 +154,6 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setIsSyncing(true);
         setTimeout(() => setIsSyncing(false), 800);
       }
-
-      const currentActiveId = activeMatchIdRef.current;
 
       // 1. BroadcastChannel (same-browser tabs)
       if (channelRef.current) {
@@ -210,6 +202,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setActiveMatchId = useCallback(
     (id: string) => {
+      lastLocalActionTimestampRef.current = Date.now();
       setActiveMatchIdState(id);
       saveActiveMatchId(id);
       activeMatchIdRef.current = id;
@@ -270,8 +263,11 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const applySyncMatches = useCallback(
-    (newMatches: any[], newActiveId?: string) => {
+    (newMatches: any[], newActiveId?: string, msgTimestamp?: number) => {
       if (!Array.isArray(newMatches) || newMatches.length === 0) return;
+      if (msgTimestamp && msgTimestamp < lastLocalActionTimestampRef.current) {
+        return; // Stale incoming sync - ignore to prevent overwriting local state
+      }
       const sanitized = sanitizeMatches(newMatches);
 
       setMatches((current) => {
@@ -307,7 +303,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-          applySyncMatches(data.matches, data.activeMatchId);
+          applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
         } else {
           // Push initial local matches to server if server is empty
           const localMatches = getStoredMatches();
@@ -334,7 +330,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           const parsed = JSON.parse(event.data);
           if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
-            applySyncMatches(parsed.matches, parsed.activeMatchId);
+            applySyncMatches(parsed.matches, parsed.activeMatchId, parsed.timestamp);
           }
         } catch {}
       };
@@ -351,11 +347,13 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const parsed = JSON.parse(event.data);
           const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
           if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-            applySyncMatches(payload.matches, payload.activeMatchId);
+            applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
           } else if (payload?.type === 'ACTIVE_MATCH_CHANGE' && payload.activeMatchId) {
-            setActiveMatchIdState(payload.activeMatchId);
-            saveActiveMatchId(payload.activeMatchId);
-            activeMatchIdRef.current = payload.activeMatchId;
+            if (!payload.timestamp || payload.timestamp >= lastLocalActionTimestampRef.current) {
+              setActiveMatchIdState(payload.activeMatchId);
+              saveActiveMatchId(payload.activeMatchId);
+              activeMatchIdRef.current = payload.activeMatchId;
+            }
           }
         } catch {}
       };
@@ -372,7 +370,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         })
         .then((data) => {
           if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-            applySyncMatches(data.matches, data.activeMatchId);
+            applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
           }
         })
         .catch(() => {
@@ -392,7 +390,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   if (data?.message) {
                     const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
                     if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-                      applySyncMatches(payload.matches, payload.activeMatchId);
+                      applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
                     }
                   }
                 } catch {}
@@ -411,11 +409,13 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       channel.onmessage = (event) => {
         if (event.data?.type === 'MATCHES_SYNC' && Array.isArray(event.data.matches)) {
-          applySyncMatches(event.data.matches, event.data.activeMatchId);
+          applySyncMatches(event.data.matches, event.data.activeMatchId, event.data.timestamp);
         } else if (event.data?.type === 'ACTIVE_MATCH_CHANGE' && event.data.activeMatchId) {
-          setActiveMatchIdState(event.data.activeMatchId);
-          saveActiveMatchId(event.data.activeMatchId);
-          activeMatchIdRef.current = event.data.activeMatchId;
+          if (!event.data.timestamp || event.data.timestamp >= lastLocalActionTimestampRef.current) {
+            setActiveMatchIdState(event.data.activeMatchId);
+            saveActiveMatchId(event.data.activeMatchId);
+            activeMatchIdRef.current = event.data.activeMatchId;
+          }
         } else if (event.data?.type === 'ANIMATION_PULSE') {
           setIsSyncing(true);
           setTimeout(() => setIsSyncing(false), 600);
@@ -907,6 +907,175 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [tournaments]
   );
 
+  // Helper to generate full 11-player cricket squads for standard and custom teams
+  const createSquadForTeam = (teamName: string, teamId: string): Player[] => {
+    const upper = teamName.toUpperCase().trim();
+
+    if (upper.includes('IND')) {
+      const roster = [
+        { name: 'Rohit Sharma', role: 'batsman' },
+        { name: 'Shubman Gill', role: 'batsman' },
+        { name: 'Virat Kohli', role: 'batsman' },
+        { name: 'Suryakumar Yadav', role: 'batsman' },
+        { name: 'Hardik Pandya', role: 'allRounder' },
+        { name: 'Rishabh Pant', role: 'wicketKeeper' },
+        { name: 'Ravindra Jadeja', role: 'allRounder' },
+        { name: 'Axar Patel', role: 'allRounder' },
+        { name: 'Kuldeep Yadav', role: 'bowler' },
+        { name: 'Jasprit Bumrah', role: 'bowler' },
+        { name: 'Mohammed Siraj', role: 'bowler' },
+      ];
+      return roster.map((p, idx) => ({
+        id: `${teamId}-${idx + 1}`,
+        name: p.name,
+        shortName: p.name.split(' ').map((w, i, a) => i === a.length - 1 ? w.toUpperCase() : w[0].toUpperCase()).join(' '),
+        role: p.role as Player['role'],
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+      }));
+    }
+
+    if (upper.includes('AUS')) {
+      const roster = [
+        { name: 'David Warner', role: 'batsman' },
+        { name: 'Travis Head', role: 'batsman' },
+        { name: 'Mitchell Marsh', role: 'allRounder' },
+        { name: 'Glenn Maxwell', role: 'allRounder' },
+        { name: 'Marcus Stoinis', role: 'allRounder' },
+        { name: 'Tim David', role: 'batsman' },
+        { name: 'Matthew Wade', role: 'wicketKeeper' },
+        { name: 'Pat Cummins', role: 'bowler' },
+        { name: 'Mitchell Starc', role: 'bowler' },
+        { name: 'Adam Zampa', role: 'bowler' },
+        { name: 'Josh Hazlewood', role: 'bowler' },
+      ];
+      return roster.map((p, idx) => ({
+        id: `${teamId}-${idx + 1}`,
+        name: p.name,
+        shortName: p.name.split(' ').map((w, i, a) => i === a.length - 1 ? w.toUpperCase() : w[0].toUpperCase()).join(' '),
+        role: p.role as Player['role'],
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+      }));
+    }
+
+    if (upper.includes('BAN')) {
+      const roster = [
+        { name: 'Tanzid Hasan', role: 'batsman' },
+        { name: 'Najmul Shanto', role: 'batsman' },
+        { name: 'Litton Das', role: 'wicketKeeper' },
+        { name: 'Shakib Al Hasan', role: 'allRounder' },
+        { name: 'Towhid Hridoy', role: 'batsman' },
+        { name: 'Mahmudullah', role: 'allRounder' },
+        { name: 'Jaker Ali', role: 'wicketKeeper' },
+        { name: 'Rishad Hossain', role: 'allRounder' },
+        { name: 'Taskin Ahmed', role: 'bowler' },
+        { name: 'Mustafizur Rahman', role: 'bowler' },
+        { name: 'Shoriful Islam', role: 'bowler' },
+      ];
+      return roster.map((p, idx) => ({
+        id: `${teamId}-${idx + 1}`,
+        name: p.name,
+        shortName: p.name.split(' ').map((w, i, a) => i === a.length - 1 ? w.toUpperCase() : w[0].toUpperCase()).join(' '),
+        role: p.role as Player['role'],
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+      }));
+    }
+
+    if (upper.includes('ENG')) {
+      const roster = [
+        { name: 'Jos Buttler', role: 'wicketKeeper' },
+        { name: 'Phil Salt', role: 'batsman' },
+        { name: 'Harry Brook', role: 'batsman' },
+        { name: 'Jonny Bairstow', role: 'batsman' },
+        { name: 'Moeen Ali', role: 'allRounder' },
+        { name: 'Liam Livingstone', role: 'allRounder' },
+        { name: 'Sam Curran', role: 'allRounder' },
+        { name: 'Chris Jordan', role: 'bowler' },
+        { name: 'Jofra Archer', role: 'bowler' },
+        { name: 'Adil Rashid', role: 'bowler' },
+        { name: 'Reece Topley', role: 'bowler' },
+      ];
+      return roster.map((p, idx) => ({
+        id: `${teamId}-${idx + 1}`,
+        name: p.name,
+        shortName: p.name.split(' ').map((w, i, a) => i === a.length - 1 ? w.toUpperCase() : w[0].toUpperCase()).join(' '),
+        role: p.role as Player['role'],
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+      }));
+    }
+
+    // Generic 11-player squad for custom teams
+    const shortPrefix = teamName.substring(0, 3).toUpperCase();
+    return Array.from({ length: 11 }, (_, i) => {
+      const num = i + 1;
+      const isWk = num === 3;
+      const isAll = num === 5 || num === 6;
+      const isBowler = num >= 8;
+      const role: Player['role'] = isWk ? 'wicketKeeper' : isAll ? 'allRounder' : isBowler ? 'bowler' : 'batsman';
+      return {
+        id: `${teamId}-${num}`,
+        name: `${teamName} Player ${num}`,
+        shortName: `${shortPrefix} P${num}`,
+        role,
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+        oversBowled: 0,
+        ballsBowled: 0,
+        maidens: 0,
+        runsConceded: 0,
+        wickets: 0,
+        widesConceded: 0,
+        noBallsConceded: 0,
+      };
+    });
+  };
+
   // Create match
   const createMatch = useCallback(
     ({
@@ -940,6 +1109,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const team1Short = team1Name.substring(0, 3).toUpperCase();
       const team2Short = team2Name.substring(0, 3).toUpperCase();
 
+      const team1Players = createSquadForTeam(team1Name, team1Id);
+      const team2Players = createSquadForTeam(team2Name, team2Id);
+
       const team1: Team = {
         id: team1Id,
         name: team1Name.toUpperCase(),
@@ -947,44 +1119,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         logoUrl: team1LogoUrl,
         primaryColor: '#1d4ed8',
         secondaryColor: '#0284c7',
-        players: [
-          {
-            id: `p-${team1Id}-1`,
-            name: 'Player 1',
-            shortName: 'P 1',
-            role: 'batsman',
-            runs: 0,
-            balls: 0,
-            fours: 0,
-            sixes: 0,
-            isOut: false,
-            oversBowled: 0,
-            ballsBowled: 0,
-            maidens: 0,
-            runsConceded: 0,
-            wickets: 0,
-            widesConceded: 0,
-            noBallsConceded: 0,
-          },
-          {
-            id: `p-${team1Id}-2`,
-            name: 'Player 2',
-            shortName: 'P 2',
-            role: 'batsman',
-            runs: 0,
-            balls: 0,
-            fours: 0,
-            sixes: 0,
-            isOut: false,
-            oversBowled: 0,
-            ballsBowled: 0,
-            maidens: 0,
-            runsConceded: 0,
-            wickets: 0,
-            widesConceded: 0,
-            noBallsConceded: 0,
-          },
-        ],
+        players: team1Players,
       };
 
       const team2: Team = {
@@ -994,31 +1129,15 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         logoUrl: team2LogoUrl,
         primaryColor: '#eab308',
         secondaryColor: '#15803d',
-        players: [
-          {
-            id: `p-${team2Id}-1`,
-            name: 'Bowler 1',
-            shortName: 'B 1',
-            role: 'bowler',
-            runs: 0,
-            balls: 0,
-            fours: 0,
-            sixes: 0,
-            isOut: false,
-            oversBowled: 0,
-            ballsBowled: 0,
-            maidens: 0,
-            runsConceded: 0,
-            wickets: 0,
-            widesConceded: 0,
-            noBallsConceded: 0,
-          },
-        ],
+        players: team2Players,
       };
 
       const tossWinnerId = tossWonBy === 'team1' ? team1Id : team2Id;
       const battingFirstId = (tossWonBy === 'team1' && optedTo === 'bat') || (tossWonBy === 'team2' && optedTo === 'bowl') ? team1Id : team2Id;
       const bowlingFirstId = battingFirstId === team1Id ? team2Id : team1Id;
+
+      const battingFirstTeam = battingFirstId === team1Id ? team1 : team2;
+      const bowlingFirstTeam = battingFirstId === team1Id ? team2 : team1;
 
       const newMatch: Match = {
         id: `match-${Date.now()}`,
@@ -1042,9 +1161,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
             legalBalls: 0,
             oversDisplay: '0.0',
             extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, total: 0 },
-            currentStrikerId: battingFirstId === team1Id ? team1.players[0].id : team2.players[0].id,
-            currentNonStrikerId: battingFirstId === team1Id ? team1.players[1]?.id || team1.players[0].id : team2.players[1]?.id || team2.players[0].id,
-            currentBowlerId: bowlingFirstId === team1Id ? team1.players[0].id : team2.players[0].id,
+            currentStrikerId: battingFirstTeam.players[0].id,
+            currentNonStrikerId: battingFirstTeam.players[1]?.id || battingFirstTeam.players[0].id,
+            currentBowlerId: bowlingFirstTeam.players[bowlingFirstTeam.players.length - 1].id,
             currentOverBalls: [],
             allBalls: [],
             fow: [],
@@ -1059,9 +1178,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
             legalBalls: 0,
             oversDisplay: '0.0',
             extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, total: 0 },
-            currentStrikerId: bowlingFirstId === team1Id ? team1.players[0].id : team2.players[0].id,
-            currentNonStrikerId: bowlingFirstId === team1Id ? team1.players[1]?.id || team1.players[0].id : team2.players[1]?.id || team2.players[0].id,
-            currentBowlerId: battingFirstId === team1Id ? team1.players[0].id : team2.players[0].id,
+            currentStrikerId: bowlingFirstTeam.players[0].id,
+            currentNonStrikerId: bowlingFirstTeam.players[1]?.id || bowlingFirstTeam.players[0].id,
+            currentBowlerId: battingFirstTeam.players[battingFirstTeam.players.length - 1].id,
             currentOverBalls: [],
             allBalls: [],
             fow: [],
@@ -1076,8 +1195,10 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       const updated = [newMatch, ...matches];
-      syncMatchState(updated);
       setActiveMatchIdState(newMatch.id);
+      saveActiveMatchId(newMatch.id);
+      activeMatchIdRef.current = newMatch.id;
+      syncMatchState(updated, true, newMatch.id);
       return newMatch;
     },
     [matches, syncMatchState]

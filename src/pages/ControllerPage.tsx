@@ -56,6 +56,9 @@ export const ControllerPage: React.FC = () => {
     isSyncing,
   } = useCricket();
 
+  // Resolve current match from route param or fallback to activeMatch
+  const currentMatch = (matchId ? matches.find((m) => m.id === matchId) : null) || activeMatch;
+
   // Set active match from route param
   useEffect(() => {
     if (matchId && matchId !== activeMatch.id) {
@@ -103,7 +106,7 @@ export const ControllerPage: React.FC = () => {
 
   const handleConfirmDeleteMatch = () => {
     setShowDeleteMatchModal(false);
-    const matchToDeleteId = activeMatch.id;
+    const matchToDeleteId = currentMatch.id;
     const remaining = matches.filter((m) => m.id !== matchToDeleteId);
     const nextId = deleteMatch(matchToDeleteId);
     if (remaining.length > 0) {
@@ -118,7 +121,7 @@ export const ControllerPage: React.FC = () => {
     e.preventDefault();
     if (!newTeam1Name.trim() || !newTeam2Name.trim()) return;
     const created = createMatch({
-      tournamentId: activeMatch.tournamentId || 'tour-t20-wc',
+      tournamentId: currentMatch.tournamentId || 'tour-t20-wc',
       team1Name: newTeam1Name.trim(),
       team2Name: newTeam2Name.trim(),
       overs: Number(newOvers) || 20,
@@ -186,19 +189,19 @@ export const ControllerPage: React.FC = () => {
   const [customAnimationText, setCustomAnimationText] = useState('');
 
   // Color picker state
-  const [team1Color, setTeam1Color] = useState(activeMatch.team1.primaryColor || '#1d4ed8');
-  const [team2Color, setTeam2Color] = useState(activeMatch.team2.primaryColor || '#eab308');
+  const [team1Color, setTeam1Color] = useState(currentMatch.team1.primaryColor || '#1d4ed8');
+  const [team2Color, setTeam2Color] = useState(currentMatch.team2.primaryColor || '#eab308');
 
   // Update color local state on active match change
   useEffect(() => {
-    setTeam1Color(activeMatch.team1.primaryColor || '#1d4ed8');
-    setTeam2Color(activeMatch.team2.primaryColor || '#eab308');
-  }, [activeMatch]);
+    setTeam1Color(currentMatch.team1.primaryColor || '#1d4ed8');
+    setTeam2Color(currentMatch.team2.primaryColor || '#eab308');
+  }, [currentMatch]);
 
   // Active inning calculations
-  const activeInning = activeMatch.innings[activeMatch.activeInningNumber - 1];
-  const battingTeam = activeMatch.team1.id === activeInning.battingTeamId ? activeMatch.team1 : activeMatch.team2;
-  const bowlingTeam = activeMatch.team1.id === activeInning.bowlingTeamId ? activeMatch.team1 : activeMatch.team2;
+  const activeInning = currentMatch.innings[currentMatch.activeInningNumber - 1];
+  const battingTeam = currentMatch.team1.id === activeInning.battingTeamId ? currentMatch.team1 : currentMatch.team2;
+  const bowlingTeam = currentMatch.team1.id === activeInning.bowlingTeamId ? currentMatch.team1 : currentMatch.team2;
 
   const striker = battingTeam.players.find((p) => p.id === activeInning.currentStrikerId);
   const nonStriker = battingTeam.players.find((p) => p.id === activeInning.currentNonStrikerId);
@@ -324,8 +327,8 @@ export const ControllerPage: React.FC = () => {
 
   // Save team colors
   const handleSaveColors = () => {
-    updateTeamColors(activeMatch.team1.id, team1Color);
-    updateTeamColors(activeMatch.team2.id, team2Color);
+    updateTeamColors(currentMatch.team1.id, team1Color);
+    updateTeamColors(currentMatch.team2.id, team2Color);
     manualSyncPulse();
   };
 
@@ -366,7 +369,7 @@ export const ControllerPage: React.FC = () => {
         ========================================================= */}
         <div className="w-full flex flex-col items-center">
           <h1 className="text-xl sm:text-2xl font-heading font-black tracking-wider text-white uppercase py-1">
-            {activeMatch.team2.name} VS {activeMatch.team1.name}
+            {currentMatch.team2.name} VS {currentMatch.team1.name}
           </h1>
 
           {/* Full-width horizontal gradient bar (magenta #ec4899 to purple #7e22ce) */}
@@ -423,17 +426,17 @@ export const ControllerPage: React.FC = () => {
           {/* Center Card: Match Score (Bright Blue Gradient #0284c7 to #2563eb) */}
           <div className="rounded-xl p-3.5 bg-gradient-to-b from-[#0284c7] to-[#2563eb] text-white shadow-lg flex flex-col items-center justify-center min-h-[110px] relative overflow-hidden">
             <span className="text-[10px] uppercase font-bold tracking-widest text-blue-100/80 mb-0.5">
-              INNINGS {activeMatch.activeInningNumber}
+              INNINGS {currentMatch.activeInningNumber}
             </span>
             <div className="font-score text-4xl sm:text-5xl font-bold leading-none tracking-wider drop-shadow-md">
               {activeInning.totalRuns} - {activeInning.wickets}
             </div>
             <div className="text-xs sm:text-sm font-black tracking-widest uppercase mt-0.5 text-blue-100">
-              {activeInning.oversDisplay}/{activeMatch.overs} OVR
+              {activeInning.oversDisplay}/{currentMatch.overs} OVR
             </div>
-            {activeMatch.targetRuns && (
+            {currentMatch.targetRuns && (
               <div className="text-[11px] font-bold text-yellow-300">
-                Target: {activeMatch.targetRuns} ({activeMatch.targetRuns - activeInning.totalRuns} needed)
+                Target: {currentMatch.targetRuns} ({currentMatch.targetRuns - activeInning.totalRuns} needed)
               </div>
             )}
           </div>
@@ -530,7 +533,7 @@ export const ControllerPage: React.FC = () => {
               onClick={endInnings}
               className="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs sm:text-sm tracking-wide shadow-md active:scale-95 transition"
             >
-              END Inning {activeMatch.activeInningNumber}
+              END Inning {currentMatch.activeInningNumber}
             </button>
 
             <button
@@ -693,8 +696,8 @@ export const ControllerPage: React.FC = () => {
 
             <button
               onClick={() => {
-                setTeam1LogoDraft(activeMatch.team1.logoUrl || '');
-                setTeam2LogoDraft(activeMatch.team2.logoUrl || '');
+                setTeam1LogoDraft(currentMatch.team1.logoUrl || '');
+                setTeam2LogoDraft(currentMatch.team2.logoUrl || '');
                 setShowLogoModal(true);
               }}
               className="px-3.5 py-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-xs font-bold tracking-wide border border-white/20 transition flex items-center gap-1.5"
@@ -710,7 +713,7 @@ export const ControllerPage: React.FC = () => {
             <div className="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-white/20">
               <input
                 type="text"
-                placeholder={`ADD PLAYER TO ${activeMatch.team1.name} (comma separated)`}
+                placeholder={`ADD PLAYER TO ${currentMatch.team1.name} (comma separated)`}
                 value={team1BulkInput}
                 onChange={(e) => setTeam1BulkInput(e.target.value)}
                 className="w-full bg-transparent text-xs text-white placeholder-pink-200/70 focus:outline-none"
@@ -718,7 +721,7 @@ export const ControllerPage: React.FC = () => {
               <button
                 onClick={() => {
                   if (team1BulkInput.trim()) {
-                    addPlayersToTeam(activeMatch.team1.id, team1BulkInput.split(','));
+                    addPlayersToTeam(currentMatch.team1.id, team1BulkInput.split(','));
                     setTeam1BulkInput('');
                   }
                 }}
@@ -732,7 +735,7 @@ export const ControllerPage: React.FC = () => {
             <div className="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-white/20">
               <input
                 type="text"
-                placeholder={`ADD PLAYER TO ${activeMatch.team2.name} (comma separated)`}
+                placeholder={`ADD PLAYER TO ${currentMatch.team2.name} (comma separated)`}
                 value={team2BulkInput}
                 onChange={(e) => setTeam2BulkInput(e.target.value)}
                 className="w-full bg-transparent text-xs text-white placeholder-pink-200/70 focus:outline-none"
@@ -740,7 +743,7 @@ export const ControllerPage: React.FC = () => {
               <button
                 onClick={() => {
                   if (team2BulkInput.trim()) {
-                    addPlayersToTeam(activeMatch.team2.id, team2BulkInput.split(','));
+                    addPlayersToTeam(currentMatch.team2.id, team2BulkInput.split(','));
                     setTeam2BulkInput('');
                   }
                 }}
@@ -757,13 +760,13 @@ export const ControllerPage: React.FC = () => {
               onClick={() => setSquadPopoverTeam(squadPopoverTeam === 'team1' ? null : 'team1')}
               className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition"
             >
-              {activeMatch.team1.name} Players ({activeMatch.team1.players.length})
+              {currentMatch.team1.name} Players ({currentMatch.team1.players.length})
             </button>
             <button
               onClick={() => setSquadPopoverTeam(squadPopoverTeam === 'team2' ? null : 'team2')}
               className="px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-bold text-xs sm:text-sm shadow-md transition"
             >
-              {activeMatch.team2.name} Players ({activeMatch.team2.players.length})
+              {currentMatch.team2.name} Players ({currentMatch.team2.players.length})
             </button>
           </div>
 
@@ -772,7 +775,7 @@ export const ControllerPage: React.FC = () => {
             <div className="mt-2 p-3 bg-white text-slate-900 rounded-xl shadow-2xl border border-slate-200 animate-in fade-in duration-150">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                 <h4 className="font-heading font-bold text-sm uppercase text-slate-900">
-                  {squadPopoverTeam === 'team1' ? activeMatch.team1.name : activeMatch.team2.name} Squad List
+                  {squadPopoverTeam === 'team1' ? currentMatch.team1.name : currentMatch.team2.name} Squad List
                 </h4>
                 <button
                   onClick={() => setSquadPopoverTeam(null)}
@@ -783,7 +786,7 @@ export const ControllerPage: React.FC = () => {
               </div>
 
               <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 mt-2">
-                {(squadPopoverTeam === 'team1' ? activeMatch.team1.players : activeMatch.team2.players).map(
+                {(squadPopoverTeam === 'team1' ? currentMatch.team1.players : currentMatch.team2.players).map(
                   (player, pIdx) => {
                     const isCyan = pIdx % 2 === 0;
                     return (
@@ -816,8 +819,8 @@ export const ControllerPage: React.FC = () => {
                             setEditingPlayer({
                               teamId:
                                 squadPopoverTeam === 'team1'
-                                  ? activeMatch.team1.id
-                                  : activeMatch.team2.id,
+                                  ? currentMatch.team1.id
+                                  : currentMatch.team2.id,
                               player: { ...player },
                             })
                           }
@@ -924,7 +927,7 @@ export const ControllerPage: React.FC = () => {
                   key={mode}
                   onClick={() => setDisplayMode(mode as DisplayMode)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase transition ${
-                    activeMatch.displayMode === mode
+                    currentMatch.displayMode === mode
                       ? 'bg-cyan-400 text-slate-950 shadow-md ring-2 ring-cyan-300'
                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
@@ -943,7 +946,7 @@ export const ControllerPage: React.FC = () => {
             <button
               onClick={() => setUmpireDecision('PENDING')}
               className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition ${
-                activeMatch.umpireDecision === 'PENDING'
+                currentMatch.umpireDecision === 'PENDING'
                   ? 'bg-yellow-400 text-slate-950 ring-2 ring-yellow-300'
                   : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
               }`}
@@ -953,7 +956,7 @@ export const ControllerPage: React.FC = () => {
             <button
               onClick={() => setUmpireDecision('OUT')}
               className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition ${
-                activeMatch.umpireDecision === 'OUT'
+                currentMatch.umpireDecision === 'OUT'
                   ? 'bg-red-600 text-white ring-2 ring-red-400'
                   : 'bg-red-500/20 text-red-400 border border-red-500/30'
               }`}
@@ -963,7 +966,7 @@ export const ControllerPage: React.FC = () => {
             <button
               onClick={() => setUmpireDecision('NOT OUT')}
               className={`px-3 py-1 rounded-lg text-xs font-black uppercase transition ${
-                activeMatch.umpireDecision === 'NOT OUT'
+                currentMatch.umpireDecision === 'NOT OUT'
                   ? 'bg-emerald-500 text-slate-950 ring-2 ring-emerald-300'
                   : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
               }`}
@@ -995,7 +998,7 @@ export const ControllerPage: React.FC = () => {
                   key={statMode}
                   onClick={() => setDisplayMode(statMode as DisplayMode)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase transition ${
-                    activeMatch.displayMode === statMode
+                    currentMatch.displayMode === statMode
                       ? 'bg-fuchsia-500 text-white shadow-md'
                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
@@ -1011,7 +1014,7 @@ export const ControllerPage: React.FC = () => {
             <div className="flex items-center gap-4">
               <span className="text-xs font-bold text-slate-400 uppercase">Select Team Color:</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-300">{activeMatch.team1.name}:</span>
+                <span className="text-xs font-semibold text-slate-300">{currentMatch.team1.name}:</span>
                 <input
                   type="color"
                   value={team1Color}
@@ -1020,7 +1023,7 @@ export const ControllerPage: React.FC = () => {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-300">{activeMatch.team2.name}:</span>
+                <span className="text-xs font-semibold text-slate-300">{currentMatch.team2.name}:</span>
                 <input
                   type="color"
                   value={team2Color}
@@ -1053,11 +1056,11 @@ export const ControllerPage: React.FC = () => {
                   Match Management
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
-                  {activeMatch.matchNo}
+                  {currentMatch.matchNo}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Current: <span className="text-cyan-400 font-bold">{activeMatch.team1.name} vs {activeMatch.team2.name}</span> • Delete or start a new match
+                Current: <span className="text-cyan-400 font-bold">{currentMatch.team1.name} vs {currentMatch.team2.name}</span> • Delete or start a new match
               </p>
             </div>
           </div>
@@ -1328,24 +1331,24 @@ export const ControllerPage: React.FC = () => {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-semibold text-slate-300 block mb-1">
-                  Team 1 ({activeMatch.team1.name}) Short Code:
+                  Team 1 ({currentMatch.team1.name}) Short Code:
                 </label>
                 <input
                   type="text"
                   maxLength={5}
-                  defaultValue={activeMatch.team1.shortName}
+                  defaultValue={currentMatch.team1.shortName}
                   id="t1Short"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white font-mono uppercase"
                 />
               </div>
               <div>
                 <label className="font-semibold text-slate-300 block mb-1">
-                  Team 2 ({activeMatch.team2.name}) Short Code:
+                  Team 2 ({currentMatch.team2.name}) Short Code:
                 </label>
                 <input
                   type="text"
                   maxLength={5}
-                  defaultValue={activeMatch.team2.shortName}
+                  defaultValue={currentMatch.team2.shortName}
                   id="t2Short"
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white font-mono uppercase"
                 />
@@ -1356,8 +1359,8 @@ export const ControllerPage: React.FC = () => {
                 onClick={() => {
                   const t1 = (document.getElementById('t1Short') as HTMLInputElement)?.value;
                   const t2 = (document.getElementById('t2Short') as HTMLInputElement)?.value;
-                  if (t1) updateTeamDetails(activeMatch.team1.id, { shortName: t1.toUpperCase() });
-                  if (t2) updateTeamDetails(activeMatch.team2.id, { shortName: t2.toUpperCase() });
+                  if (t1) updateTeamDetails(currentMatch.team1.id, { shortName: t1.toUpperCase() });
+                  if (t2) updateTeamDetails(currentMatch.team2.id, { shortName: t2.toUpperCase() });
                   setShowShortNameModal(false);
                 }}
                 className="px-4 py-2 rounded-xl bg-cyan-400 text-slate-950 font-bold text-xs"
@@ -1395,7 +1398,7 @@ export const ControllerPage: React.FC = () => {
               <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="font-heading font-black text-sm text-cyan-300 uppercase tracking-wide">
-                    {activeMatch.team1.name}
+                    {currentMatch.team1.name}
                   </span>
                   {team1LogoDraft && (
                     <button
@@ -1413,7 +1416,7 @@ export const ControllerPage: React.FC = () => {
                   {/* Preview Avatar */}
                   <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-cyan-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow">
                     {team1LogoDraft ? (
-                      <img src={team1LogoDraft} alt={activeMatch.team1.name} className="w-full h-full object-contain" />
+                      <img src={team1LogoDraft} alt={currentMatch.team1.name} className="w-full h-full object-contain" />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-slate-500 text-[10px] font-bold text-center">
                         <ImageIcon className="w-5 h-5 text-slate-600 mb-0.5" />
@@ -1456,7 +1459,7 @@ export const ControllerPage: React.FC = () => {
               <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <span className="font-heading font-black text-sm text-pink-300 uppercase tracking-wide">
-                    {activeMatch.team2.name}
+                    {currentMatch.team2.name}
                   </span>
                   {team2LogoDraft && (
                     <button
@@ -1474,7 +1477,7 @@ export const ControllerPage: React.FC = () => {
                   {/* Preview Avatar */}
                   <div className="w-16 h-16 rounded-2xl bg-slate-900 border-2 border-pink-500/40 p-1 flex items-center justify-center shrink-0 overflow-hidden shadow">
                     {team2LogoDraft ? (
-                      <img src={team2LogoDraft} alt={activeMatch.team2.name} className="w-full h-full object-contain" />
+                      <img src={team2LogoDraft} alt={currentMatch.team2.name} className="w-full h-full object-contain" />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-slate-500 text-[10px] font-bold text-center">
                         <ImageIcon className="w-5 h-5 text-slate-600 mb-0.5" />
@@ -1525,8 +1528,8 @@ export const ControllerPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  updateTeamDetails(activeMatch.team1.id, { logoUrl: team1LogoDraft });
-                  updateTeamDetails(activeMatch.team2.id, { logoUrl: team2LogoDraft });
+                  updateTeamDetails(currentMatch.team1.id, { logoUrl: team1LogoDraft });
+                  updateTeamDetails(currentMatch.team2.id, { logoUrl: team2LogoDraft });
                   setShowLogoModal(false);
                 }}
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 font-heading font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-400/25 active:scale-95 transition"
@@ -1721,13 +1724,13 @@ export const ControllerPage: React.FC = () => {
             {/* Current Match Preview */}
             <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between text-xs text-slate-400">
-                <span className="font-bold text-slate-300">{activeMatch.matchNo}</span>
-                <span className="font-mono text-cyan-400">{activeMatch.overs} Overs Match</span>
+                <span className="font-bold text-slate-300">{currentMatch.matchNo}</span>
+                <span className="font-mono text-cyan-400">{currentMatch.overs} Overs Match</span>
               </div>
               <div className="text-base font-black text-white flex items-center gap-2">
-                <span className="text-cyan-300">{activeMatch.team1.name}</span>
+                <span className="text-cyan-300">{currentMatch.team1.name}</span>
                 <span className="text-red-400 text-xs font-normal">VS</span>
-                <span className="text-amber-300">{activeMatch.team2.name}</span>
+                <span className="text-amber-300">{currentMatch.team2.name}</span>
               </div>
               <div className="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-900 font-mono">
                 <span>Current Score:</span>

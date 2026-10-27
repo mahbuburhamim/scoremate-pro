@@ -625,16 +625,13 @@ export function getStoredMatches(): Match[] {
             m.team2
         )
       : [];
-    // Auto-migrate legacy matches so Bangladesh vs England is active
-    if (
-      valid.length === 0 ||
-      valid[0]?.team1?.name === 'INDIA' ||
-      valid[0]?.id === 'match-ind-aus-final'
-    ) {
+    // Auto-migrate legacy template match if present
+    const cleaned = valid.filter((m) => m.id !== 'match-ind-aus-final');
+    if (cleaned.length === 0) {
       localStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify([defaultInitialMatch]));
       return [defaultInitialMatch];
     }
-    return valid;
+    return cleaned;
   } catch (e) {
     console.error('Failed reading matches from localStorage', e);
     return [defaultInitialMatch];
