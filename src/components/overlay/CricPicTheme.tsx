@@ -36,52 +36,52 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
           style={{
             background: `linear-gradient(135deg, ${team1Bg} 0%, #0f172a 100%)`,
           }}
-          className="flex-1 flex items-center justify-between px-3 sm:px-5 py-2 text-white border-r border-white/20 min-w-0"
+          className="flex-1 flex items-center justify-start gap-3 sm:gap-4 px-3 sm:px-4 py-2 text-white border-r border-white/20 min-w-0"
         >
           {/* Batting Team Badge */}
-          <div className="flex items-center gap-2.5 sm:gap-3 pr-2.5 sm:pr-3 border-r border-white/10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 pr-2.5 sm:pr-3 border-r border-white/10 shrink-0">
             {battingTeam.logoUrl && (
               <img
                 src={battingTeam.logoUrl}
                 alt={battingTeam.name}
-                className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md shrink-0"
+                className="w-9 sm:w-10 h-9 sm:h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md shrink-0"
               />
             )}
             <div className="flex flex-col items-start">
               <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-300">
                 BATTING
               </span>
-              <span className="font-heading font-black text-base sm:text-lg tracking-wider uppercase drop-shadow">
+              <span className="font-heading font-black text-sm sm:text-base tracking-wider uppercase drop-shadow">
                 {battingTeam.name}
               </span>
             </div>
           </div>
 
           {/* Batters List */}
-          <div className="flex items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
             {/* Striker */}
-            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-              <div className="relative shrink-0 w-12 sm:w-14 h-12 sm:h-14">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              <div className="relative shrink-0 w-11 sm:w-12 h-11 sm:h-12">
                 {striker?.photoUrl ? (
                   <img
                     src={striker.photoUrl}
                     alt={striker.name}
-                    className="w-12 sm:w-14 h-12 sm:h-14 rounded-full object-cover border-2 border-emerald-400 shadow-lg ring-2 ring-emerald-400/40 shrink-0"
+                    className="w-11 sm:w-12 h-11 sm:h-12 rounded-full object-cover border-2 border-emerald-400 shadow-lg ring-2 ring-emerald-400/40 shrink-0"
                   />
                 ) : (
-                  <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-bold text-base sm:text-lg text-emerald-300 shrink-0">
+                  <div className="w-11 sm:w-12 h-11 sm:h-12 rounded-full bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-bold text-sm sm:text-base text-emerald-300 shrink-0">
                     {striker?.name?.[0] || 'T'}
                   </div>
                 )}
                 {/* Active Strike Indicator */}
-                <div className="absolute -bottom-1 -right-1 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center shadow shrink-0">
-                  <Play className="w-2.5 h-2.5 fill-slate-950 text-slate-950" />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center shadow shrink-0">
+                  <Play className="w-2 h-2 fill-slate-950 text-slate-950" />
                 </div>
               </div>
 
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-heading font-black text-sm sm:text-base tracking-wide uppercase text-white truncate max-w-[130px]">
+                <div className="flex items-center gap-1">
+                  <span className="font-heading font-black text-sm sm:text-base tracking-wide uppercase text-white truncate max-w-[110px] sm:max-w-[125px]">
                     {striker?.shortName || striker?.name || 'T. TAMIM'}
                   </span>
                   <span className="text-[10px] font-bold text-emerald-400 font-mono">*</span>
@@ -91,31 +91,28 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
                     {striker?.runs || 0}
                   </span>
                   <span className="text-xs font-semibold text-slate-300">({striker?.balls || 0})</span>
-                  <span className="text-[10px] text-slate-300 ml-1 whitespace-nowrap font-mono">
-                    4s:{striker?.fours || 0} 6s:{striker?.sixes || 0}
-                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Non-Striker */}
-            <div className="flex items-center gap-2 sm:gap-2.5 pl-2.5 sm:pl-3 border-l border-white/10 opacity-90 shrink-0">
-              <div className="relative shrink-0 w-10 sm:w-12 h-10 sm:h-12">
+            {/* Non-Striker (Shifted Left) */}
+            <div className="flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-2.5 border-l border-white/10 opacity-90 shrink-0">
+              <div className="relative shrink-0 w-9 sm:w-10 h-9 sm:h-10">
                 {nonStriker?.photoUrl ? (
                   <img
                     src={nonStriker.photoUrl}
                     alt={nonStriker.name}
-                    className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover border-2 border-slate-400/80 shadow shrink-0"
+                    className="w-9 sm:w-10 h-9 sm:h-10 rounded-full object-cover border-2 border-slate-400/80 shadow shrink-0"
                   />
                 ) : (
-                  <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-slate-800 border-2 border-slate-400 flex items-center justify-center font-bold text-sm sm:text-base text-slate-300 shrink-0">
+                  <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-slate-800 border-2 border-slate-400 flex items-center justify-center font-bold text-xs sm:text-sm text-slate-300 shrink-0">
                     {nonStriker?.name?.[0] || 'N'}
                   </div>
                 )}
               </div>
 
               <div className="flex flex-col">
-                <span className="font-heading font-bold text-xs sm:text-sm tracking-wide uppercase text-slate-200 truncate max-w-[115px]">
+                <span className="font-heading font-bold text-xs sm:text-sm tracking-wide uppercase text-slate-200 truncate max-w-[105px] sm:max-w-[120px]">
                   {nonStriker?.shortName || nonStriker?.name || 'N. SHANTO'}
                 </span>
                 <div className="flex items-baseline gap-1.5 whitespace-nowrap">
