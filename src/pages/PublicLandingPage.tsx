@@ -508,7 +508,7 @@ export const PublicLandingPage: React.FC = () => {
 
               {/* Bottom Responsive Scaled Overlay Theme (Zero Cutoff on Mobile) */}
               <div className="relative z-10 w-full flex justify-center items-end overflow-hidden pb-1">
-                <ResponsiveScoreboardWrapper designWidth={1240}>
+                <ResponsiveScoreboardWrapper designWidth={1340}>
                   {activeThemeTab === 'cricpic' && <CricPicTheme match={demoMatch} />}
                   {activeThemeTab === 'asiacup' && <AsiaCupTheme match={demoMatch} />}
                   {activeThemeTab === 'cwc23' && <CWC23Theme match={demoMatch} />}

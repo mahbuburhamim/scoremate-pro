@@ -167,7 +167,7 @@ export const LinksPage: React.FC = () => {
 
             {/* Bottom Responsive Scoreboard (Zero Cutoff on Mobile & Desktop) */}
             <div className="relative z-10 w-full flex justify-center items-end overflow-hidden pb-1 pt-4">
-              <ResponsiveScoreboardWrapper designWidth={1240}>
+              <ResponsiveScoreboardWrapper designWidth={1340}>
                 {previewTheme === 'cricpic' && <CricPicTheme match={currentMatch} />}
                 {previewTheme === 'asiacup' && <AsiaCupTheme match={currentMatch} />}
                 {previewTheme === 'cwc23' && <CWC23Theme match={currentMatch} />}

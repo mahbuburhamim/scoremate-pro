@@ -24,8 +24,31 @@ export const OverlayPage: React.FC = () => {
   const [showTestBar, setShowTestBar] = useState<boolean>(true);
   const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
-  // Match lookup
-  const match = matches.find((m) => m.id === matchId) || activeMatch;
+  // Direct match lookup state for immediate resolution if context hasn't loaded match yet
+  const [directMatch, setDirectMatch] = useState<any>(null);
+
+  useEffect(() => {
+    if (matchId && matchId !== 'active') {
+      const found = matches.find((m) => m.id === matchId);
+      if (found) {
+        setDirectMatch(found);
+      } else {
+        // Immediate server fetch if matchId not in local context yet
+        fetch('/api/match')
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.matches && Array.isArray(data.matches)) {
+              const m = data.matches.find((item: any) => item.id === matchId);
+              if (m) setDirectMatch(m);
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [matchId, matches]);
+
+  // Match lookup with direct match fallback
+  const match = (matchId && matchId !== 'active' ? matches.find((m) => m.id === matchId) : null) || directMatch || activeMatch;
 
   // Set body background to transparent if transparentParam is true
   useEffect(() => {
@@ -153,7 +176,7 @@ export const OverlayPage: React.FC = () => {
 
       {/* Main Lower-Third Broadcast Strip (Auto Responsive Scaling on Mobile & Desktop) */}
       <div className="w-full pb-4 sm:pb-8 z-20 flex justify-center items-end overflow-hidden">
-        <ResponsiveScoreboardWrapper designWidth={1240}>
+        <ResponsiveScoreboardWrapper designWidth={1340}>
           {renderTheme()}
         </ResponsiveScoreboardWrapper>
       </div>

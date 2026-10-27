@@ -649,6 +649,22 @@ export function saveMatches(matches: Match[]): void {
   }
 }
 
+export function getStoredActiveMatchId(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.ACTIVE_MATCH_ID);
+  } catch {
+    return null;
+  }
+}
+
+export function saveActiveMatchId(id: string): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ACTIVE_MATCH_ID, id);
+  } catch (e) {
+    console.error('Failed saving activeMatchId to localStorage', e);
+  }
+}
+
 export function calculateStorageUsage(): { usedKb: number; maxKb: number; percent: number } {
   try {
     let total = 0;

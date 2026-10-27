@@ -29,52 +29,52 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
   const team2Bg = bowlingTeam.primaryColor || '#eab308';
 
   return (
-    <div className="w-full max-w-[1240px] mx-auto px-2 drop-shadow-2xl font-sans">
+    <div className="w-full max-w-[1360px] mx-auto px-2 drop-shadow-2xl font-sans">
       <div className="flex items-stretch justify-center h-24 rounded-2xl overflow-hidden shadow-2xl border border-white/20">
         {/* ================= LEFT WING: BATTING TEAM & BATTERS ================= */}
         <div
           style={{
             background: `linear-gradient(135deg, ${team1Bg} 0%, #0f172a 100%)`,
           }}
-          className="flex-1 flex items-center justify-between px-4 sm:px-6 py-2 text-white border-r border-white/20"
+          className="flex-1 flex items-center justify-between px-3 sm:px-5 py-2 text-white border-r border-white/20 min-w-0"
         >
           {/* Batting Team Badge */}
-          <div className="flex items-center gap-3 pr-3 border-r border-white/10 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 pr-2.5 sm:pr-3 border-r border-white/10 shrink-0">
             {battingTeam.logoUrl && (
               <img
                 src={battingTeam.logoUrl}
                 alt={battingTeam.name}
-                className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md"
+                className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md shrink-0"
               />
             )}
             <div className="flex flex-col items-start">
               <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-300">
                 BATTING
               </span>
-              <span className="font-heading font-black text-lg sm:text-xl tracking-wider uppercase drop-shadow">
+              <span className="font-heading font-black text-base sm:text-lg tracking-wider uppercase drop-shadow">
                 {battingTeam.name}
               </span>
             </div>
           </div>
 
           {/* Batters List */}
-          <div className="flex items-center gap-4 sm:gap-6 overflow-hidden">
+          <div className="flex items-center gap-3 sm:gap-5">
             {/* Striker */}
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <div className="relative">
+            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+              <div className="relative shrink-0 w-12 sm:w-14 h-12 sm:h-14">
                 {striker?.photoUrl ? (
                   <img
                     src={striker.photoUrl}
                     alt={striker.name}
-                    className="w-12 sm:w-14 h-12 sm:h-14 rounded-full object-cover border-2 border-emerald-400 shadow-lg ring-2 ring-emerald-400/40"
+                    className="w-12 sm:w-14 h-12 sm:h-14 rounded-full object-cover border-2 border-emerald-400 shadow-lg ring-2 ring-emerald-400/40 shrink-0"
                   />
                 ) : (
-                  <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-bold text-base sm:text-lg text-emerald-300">
+                  <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-slate-800 border-2 border-emerald-400 flex items-center justify-center font-bold text-base sm:text-lg text-emerald-300 shrink-0">
                     {striker?.name?.[0] || 'T'}
                   </div>
                 )}
                 {/* Active Strike Indicator */}
-                <div className="absolute -bottom-1 -right-1 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center shadow">
+                <div className="absolute -bottom-1 -right-1 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-emerald-500 border border-slate-950 flex items-center justify-center shadow shrink-0">
                   <Play className="w-2.5 h-2.5 fill-slate-950 text-slate-950" />
                 </div>
               </div>
@@ -86,39 +86,39 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
                   </span>
                   <span className="text-[10px] font-bold text-emerald-400 font-mono">*</span>
                 </div>
-                <div className="flex items-baseline gap-1.5">
+                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
                   <span className="font-score text-2xl sm:text-3xl font-bold text-emerald-400 leading-none">
                     {striker?.runs || 0}
                   </span>
                   <span className="text-xs font-semibold text-slate-300">({striker?.balls || 0})</span>
-                  <span className="text-[10px] text-slate-400 ml-1">
-                    4s: {striker?.fours || 0} 6s: {striker?.sixes || 0}
+                  <span className="text-[10px] text-slate-300 ml-1 whitespace-nowrap font-mono">
+                    4s:{striker?.fours || 0} 6s:{striker?.sixes || 0}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Non-Striker */}
-            <div className="flex items-center gap-2.5 sm:gap-3 pl-3 sm:pl-4 border-l border-white/10 opacity-90">
-              <div className="relative">
+            <div className="flex items-center gap-2 sm:gap-2.5 pl-2.5 sm:pl-3 border-l border-white/10 opacity-90 shrink-0">
+              <div className="relative shrink-0 w-10 sm:w-12 h-10 sm:h-12">
                 {nonStriker?.photoUrl ? (
                   <img
                     src={nonStriker.photoUrl}
                     alt={nonStriker.name}
-                    className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover border-2 border-slate-400/80 shadow"
+                    className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover border-2 border-slate-400/80 shadow shrink-0"
                   />
                 ) : (
-                  <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-slate-800 border-2 border-slate-400 flex items-center justify-center font-bold text-sm sm:text-base text-slate-300">
+                  <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-slate-800 border-2 border-slate-400 flex items-center justify-center font-bold text-sm sm:text-base text-slate-300 shrink-0">
                     {nonStriker?.name?.[0] || 'N'}
                   </div>
                 )}
               </div>
 
               <div className="flex flex-col">
-                <span className="font-heading font-bold text-xs sm:text-sm tracking-wide uppercase text-slate-200 truncate max-w-[120px]">
+                <span className="font-heading font-bold text-xs sm:text-sm tracking-wide uppercase text-slate-200 truncate max-w-[115px]">
                   {nonStriker?.shortName || nonStriker?.name || 'N. SHANTO'}
                 </span>
-                <div className="flex items-baseline gap-1.5">
+                <div className="flex items-baseline gap-1.5 whitespace-nowrap">
                   <span className="font-score text-xl sm:text-2xl font-bold text-slate-100 leading-none">
                     {nonStriker?.runs || 0}
                   </span>
@@ -173,19 +173,19 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
           style={{
             background: `linear-gradient(135deg, #0f172a 0%, ${team2Bg} 100%)`,
           }}
-          className="flex-1 flex items-center justify-between px-4 sm:px-6 py-2 text-white border-l border-white/20"
+          className="flex-1 flex items-center justify-between px-3 sm:px-5 py-2 text-white border-l border-white/20 min-w-0"
         >
           {/* Bowler Details */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="relative">
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            <div className="relative shrink-0 w-12 sm:w-14 h-12 sm:h-14">
               {bowler?.photoUrl ? (
                 <img
                   src={bowler.photoUrl}
                   alt={bowler.name}
-                  className="w-12 sm:w-14 h-12 sm:h-14 rounded-full object-cover border-2 border-cyan-400 shadow-lg ring-2 ring-cyan-400/40"
+                  className="w-12 sm:w-14 h-12 sm:h-14 rounded-full object-cover border-2 border-cyan-400 shadow-lg ring-2 ring-cyan-400/40 shrink-0"
                 />
               ) : (
-                <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-slate-800 border-2 border-cyan-400 flex items-center justify-center font-bold text-base sm:text-lg text-cyan-300">
+                <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-slate-800 border-2 border-cyan-400 flex items-center justify-center font-bold text-base sm:text-lg text-cyan-300 shrink-0">
                   {bowler?.name?.[0] || 'A'}
                 </div>
               )}
@@ -195,10 +195,10 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
               <span className="text-[10px] uppercase font-bold tracking-widest text-cyan-300">
                 BOWLING
               </span>
-              <span className="font-heading font-black text-sm sm:text-base tracking-wide uppercase text-white truncate max-w-[140px]">
+              <span className="font-heading font-black text-sm sm:text-base tracking-wide uppercase text-white truncate max-w-[130px]">
                 {bowler?.shortName || bowler?.name || 'A. RASHID'}
               </span>
-              <div className="flex items-baseline gap-1 text-slate-200">
+              <div className="flex items-baseline gap-1 text-slate-200 whitespace-nowrap">
                 <span className="font-score text-xl sm:text-2xl font-bold leading-none text-white">
                   {bowler?.wickets || 0} - {bowler?.runsConceded || 0}
                 </span>
@@ -208,17 +208,17 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
           </div>
 
           {/* Current Over 6 Ball Bubbles */}
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-end gap-1 shrink-0">
             <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-300">
               THIS OVER
             </span>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5">
               {[0, 1, 2, 3, 4, 5].map((slotIdx) => {
                 const ball = activeInning.currentOverBalls[slotIdx];
                 return (
                   <div
                     key={slotIdx}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-md transition ${
+                    className={`w-6 sm:w-7 h-6 sm:h-7 rounded-full flex items-center justify-center font-bold text-[11px] sm:text-xs shadow-md transition shrink-0 ${
                       ball
                         ? ball.isWicket
                           ? 'bg-red-600 text-white font-black'
@@ -240,12 +240,12 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
           </div>
 
           {/* Bowling Team Badge */}
-          <div className="flex items-center gap-3 pl-4 border-l border-white/10 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 pl-2.5 sm:pl-3 border-l border-white/10 shrink-0">
             <div className="flex flex-col items-end">
               <span className="text-[10px] uppercase font-bold tracking-widest text-yellow-300">
                 FIELDING
               </span>
-              <span className="font-heading font-black text-xl tracking-wider uppercase drop-shadow text-white">
+              <span className="font-heading font-black text-base sm:text-lg tracking-wider uppercase drop-shadow text-white">
                 {bowlingTeam.name}
               </span>
             </div>
@@ -253,7 +253,7 @@ export const CricPicTheme: React.FC<ThemeProps> = ({ match }) => {
               <img
                 src={bowlingTeam.logoUrl}
                 alt={bowlingTeam.name}
-                className="w-11 h-11 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md"
+                className="w-10 sm:w-11 h-10 sm:h-11 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shadow-md shrink-0"
               />
             )}
           </div>

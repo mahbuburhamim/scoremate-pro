@@ -17,6 +17,8 @@ import {
   getStoredTournaments,
   saveTournaments,
   defaultInitialMatch,
+  getStoredActiveMatchId,
+  saveActiveMatchId,
 } from '../utils/storage';
 
 interface AddBallArgs {
@@ -114,6 +116,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return sanitized.length > 0 ? sanitized : [defaultInitialMatch];
   });
   const [activeMatchId, setActiveMatchIdState] = useState<string>(() => {
+    const storedId = getStoredActiveMatchId();
     const list = getStoredMatches();
     const sanitized = list.filter(
       (m) =>
@@ -121,6 +124,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         !m.team1?.name?.toUpperCase().includes('IND') &&
         !m.team2?.name?.toUpperCase().includes('AUS')
     );
+    if (storedId && sanitized.some((m) => m.id === storedId)) {
+      return storedId;
+    }
     return sanitized[0]?.id || defaultInitialMatch.id;
   });
 
@@ -134,41 +140,90 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const activeMatch = isValidMatch(rawMatch) ? rawMatch : defaultInitialMatch;
 
   // Sync to channel and storage
-  const syncMatchState = useCallback((updatedMatches: Match[], triggerPulse = true) => {
-    const validMatches = sanitizeMatches(updatedMatches);
-    if (validMatches.length === 0) return;
+  const syncMatchState = useCallback(
+    (updatedMatches: Match[], triggerPulse = true) => {
+      const validMatches = sanitizeMatches(updatedMatches);
+      if (validMatches.length === 0) return;
 
-    setMatches(validMatches);
-    saveMatches(validMatches);
+      setMatches(validMatches);
+      saveMatches(validMatches);
 
-    if (triggerPulse) {
-      setIsSyncing(true);
-      setTimeout(() => setIsSyncing(false), 800);
-    }
+      if (triggerPulse) {
+        setIsSyncing(true);
+        setTimeout(() => setIsSyncing(false), 800);
+      }
 
-    if (channelRef.current) {
+      if (channelRef.current) {
+        try {
+          channelRef.current.postMessage({
+            type: 'MATCHES_SYNC',
+            matches: validMatches,
+            activeMatchId,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          console.warn('BroadcastChannel postMessage error', err);
+        }
+      }
+
+      // Push update to local server for OBS Studio (CEF) and external devices
       try {
-        channelRef.current.postMessage({
-          type: 'MATCHES_SYNC',
-          matches: validMatches,
-          timestamp: Date.now(),
-        });
-      } catch (err) {
-        console.warn('BroadcastChannel postMessage error', err);
+        fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matches: validMatches, activeMatchId }),
+        }).catch(() => {});
+      } catch {
+        // ignore
+      }
+    },
+    [sanitizeMatches, activeMatchId]
+  );
+
+  const setActiveMatchId = useCallback(
+    (id: string) => {
+      setActiveMatchIdState(id);
+      saveActiveMatchId(id);
+
+      if (channelRef.current) {
+        try {
+          channelRef.current.postMessage({
+            type: 'ACTIVE_MATCH_CHANGE',
+            activeMatchId: id,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          console.warn('BroadcastChannel setActiveMatchId error', err);
+        }
+      }
+
+      try {
+        fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matches, activeMatchId: id }),
+        }).catch(() => {});
+      } catch {
+        // ignore
+      }
+    },
+    [matches]
+  );
+
+  // Keep local server in sync on mount and whenever matches change
+  useEffect(() => {
+    if (matches && matches.length > 0) {
+      try {
+        fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matches, activeMatchId }),
+        }).catch(() => {});
+      } catch {
+        // ignore
       }
     }
-
-    // Push update to local server for OBS Studio (CEF) and external devices
-    try {
-      fetch('/api/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ matches: validMatches }),
-      }).catch(() => {});
-    } catch {
-      // ignore
-    }
-  }, [sanitizeMatches]);
+  }, [matches, activeMatchId]);
 
   // Set up BroadcastChannel + SSE (Server-Sent Events for OBS) + Storage event fallback
   useEffect(() => {
@@ -177,7 +232,26 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .then((r) => r.json())
       .then((data) => {
         if (data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-          setMatches(sanitizeMatches(data.matches));
+          const sanitized = sanitizeMatches(data.matches);
+          setMatches(sanitized);
+          if (data.activeMatchId && sanitized.some((m: any) => m.id === data.activeMatchId)) {
+            setActiveMatchIdState(data.activeMatchId);
+            saveActiveMatchId(data.activeMatchId);
+          }
+        } else {
+          // Server has no cached matches yet; push client matches to populate server cache
+          const localMatches = getStoredMatches();
+          const storedActive = getStoredActiveMatchId();
+          if (localMatches && localMatches.length > 0) {
+            fetch('/api/match', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                matches: localMatches,
+                activeMatchId: storedActive || localMatches[0]?.id,
+              }),
+            }).catch(() => {});
+          }
         }
       })
       .catch(() => {});
@@ -190,7 +264,12 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           const parsed = JSON.parse(event.data);
           if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
-            setMatches(sanitizeMatches(parsed.matches));
+            const sanitized = sanitizeMatches(parsed.matches);
+            setMatches(sanitized);
+            if (parsed.activeMatchId && sanitized.some((m: any) => m.id === parsed.activeMatchId)) {
+              setActiveMatchIdState(parsed.activeMatchId);
+              saveActiveMatchId(parsed.activeMatchId);
+            }
           }
         } catch {
           // ignore
@@ -206,15 +285,22 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .then((r) => r.json())
         .then((data) => {
           if (data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
+            const sanitized = sanitizeMatches(data.matches);
             setMatches((current) => {
               const currUpdated = current.find((m) => m.id === activeMatchId)?.updatedAt || 0;
-              const newMatch = data.matches.find((m: any) => m.id === activeMatchId);
+              const newMatch = sanitized.find((m: any) => m.id === activeMatchId);
               const newUpdated = newMatch?.updatedAt || 0;
-              if (newUpdated > currUpdated) {
-                return sanitizeMatches(data.matches);
+              if (newUpdated > currUpdated || sanitized.length !== current.length) {
+                return sanitized;
               }
               return current;
             });
+            if (data.activeMatchId && data.activeMatchId !== activeMatchId) {
+              if (sanitized.some((m: any) => m.id === data.activeMatchId)) {
+                setActiveMatchIdState(data.activeMatchId);
+                saveActiveMatchId(data.activeMatchId);
+              }
+            }
           }
         })
         .catch(() => {});
@@ -227,7 +313,15 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       channel.onmessage = (event) => {
         if (event.data?.type === 'MATCHES_SYNC' && Array.isArray(event.data.matches)) {
-          setMatches(sanitizeMatches(event.data.matches));
+          const sanitized = sanitizeMatches(event.data.matches);
+          setMatches(sanitized);
+          if (event.data.activeMatchId && sanitized.some((m: any) => m.id === event.data.activeMatchId)) {
+            setActiveMatchIdState(event.data.activeMatchId);
+            saveActiveMatchId(event.data.activeMatchId);
+          }
+        } else if (event.data?.type === 'ACTIVE_MATCH_CHANGE' && event.data.activeMatchId) {
+          setActiveMatchIdState(event.data.activeMatchId);
+          saveActiveMatchId(event.data.activeMatchId);
         } else if (event.data?.type === 'ANIMATION_PULSE') {
           setIsSyncing(true);
           setTimeout(() => setIsSyncing(false), 600);
@@ -245,6 +339,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } catch {
           // ignore
         }
+      } else if (e.key === 'cricscorer_active_match_id' && e.newValue) {
+        setActiveMatchIdState(e.newValue);
       }
     };
 
@@ -256,11 +352,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       clearInterval(pollInterval);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [activeMatchId]);
+  }, [activeMatchId, sanitizeMatches]);
 
-  const setActiveMatchId = useCallback((id: string) => {
-    setActiveMatchIdState(id);
-  }, []);
 
   // Cricket Scoring Logic with precise ball-by-ball resolution
   const addBall = useCallback(
