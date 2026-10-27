@@ -30,6 +30,7 @@ import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
 import { Special2023Theme } from '../components/overlay/Special2023Theme';
+import { ILT20SpecialTheme } from '../components/overlay/ILT20SpecialTheme';
 import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import logoImg from '../assets/logo.png';
 
@@ -177,7 +178,7 @@ const demoMatch: Match = {
 
 export const PublicLandingPage: React.FC = () => {
   const { openAuthModal } = useAuth();
-  const [activeThemeTab, setActiveThemeTab] = useState<'cricpic' | 'asiacup' | 'cwc23' | 'iplneon' | 'special2023'>('cricpic');
+  const [activeThemeTab, setActiveThemeTab] = useState<'cricpic' | 'asiacup' | 'cwc23' | 'iplneon' | 'special2023' | 'ilt20special'>('cricpic');
 
   const themes = [
     {
@@ -209,6 +210,12 @@ export const PublicLandingPage: React.FC = () => {
       name: '2023 Special',
       desc: 'Official 2023 bilateral broadcast design with royal blue capsule pill, vibrant orange score, and ball-by-ball tracker.',
       color: 'from-blue-700 via-indigo-600 to-sky-400',
+    },
+    {
+      id: 'ilt20special',
+      name: 'ILT20 Special',
+      desc: 'Official DP World ILT20 Dubai theme with purple & red angled plates, dot-ball tracker, and country flags.',
+      color: 'from-purple-700 via-violet-600 to-rose-600',
     },
   ];
 
@@ -472,7 +479,7 @@ export const PublicLandingPage: React.FC = () => {
               VISUAL EXCELLENCE
             </span>
             <h2 className="font-heading font-black text-3xl sm:text-4xl text-slate-900 mt-4">
-              Explore 5 TV Broadcast Themes
+              Explore 6 TV Broadcast Themes
             </h2>
             <p className="mt-2 text-slate-600 text-sm max-w-xl mx-auto">
               Every theme has its own distinctive broadcast geometry, colors, typography, and layout. Select each tab to preview the actual scoreboard graphics.
@@ -521,6 +528,7 @@ export const PublicLandingPage: React.FC = () => {
                   {activeThemeTab === 'cwc23' && <CWC23Theme match={demoMatch} />}
                   {activeThemeTab === 'iplneon' && <IPLNeonTheme match={demoMatch} />}
                   {activeThemeTab === 'special2023' && <Special2023Theme match={demoMatch} />}
+                  {activeThemeTab === 'ilt20special' && <ILT20SpecialTheme match={demoMatch} />}
                 </ResponsiveScoreboardWrapper>
               </div>
             </div>

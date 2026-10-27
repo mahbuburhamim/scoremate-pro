@@ -8,6 +8,7 @@ import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
 import { Special2023Theme } from '../components/overlay/Special2023Theme';
+import { ILT20SpecialTheme } from '../components/overlay/ILT20SpecialTheme';
 import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import {
   Copy,
@@ -80,6 +81,14 @@ export const LinksPage: React.FC = () => {
       badge: 'EXCLUSIVE',
       tier: 'Pro Included',
       description: 'Official 2023 bilateral capsule theme with vibrant orange score, stacked dual batters & live ball tracker.',
+    },
+    {
+      no: 6,
+      id: 'ilt20special',
+      name: 'ILT20 Special',
+      badge: 'DP WORLD',
+      tier: 'Pro Included',
+      description: 'Official ILT20 Dubai broadcast theme with purple & red angled plates, dot-ball tracker & country flags.',
     },
   ];
 
@@ -182,6 +191,7 @@ export const LinksPage: React.FC = () => {
                 {previewTheme === 'cwc23' && <CWC23Theme match={currentMatch} />}
                 {previewTheme === 'iplneon' && <IPLNeonTheme match={currentMatch} />}
                 {previewTheme === 'special2023' && <Special2023Theme match={currentMatch} />}
+                {previewTheme === 'ilt20special' && <ILT20SpecialTheme match={currentMatch} />}
               </ResponsiveScoreboardWrapper>
             </div>
           </div>

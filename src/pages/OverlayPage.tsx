@@ -7,6 +7,7 @@ import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
 import { Special2023Theme } from '../components/overlay/Special2023Theme';
+import { ILT20SpecialTheme } from '../components/overlay/ILT20SpecialTheme';
 import { EventRibbon } from '../components/overlay/EventRibbon';
 import { BroadcastCards } from '../components/overlay/BroadcastCards';
 import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
@@ -78,6 +79,8 @@ export const OverlayPage: React.FC = () => {
         return <IPLNeonTheme match={match} />;
       case 'special2023':
         return <Special2023Theme match={match} />;
+      case 'ilt20special':
+        return <ILT20SpecialTheme match={match} />;
       case 'cricpic':
       default:
         return <CricPicTheme match={match} />;
@@ -130,6 +133,9 @@ export const OverlayPage: React.FC = () => {
                   </option>
                   <option value="special2023" className="bg-slate-900 text-white">
                     5. 2023 Special
+                  </option>
+                  <option value="ilt20special" className="bg-slate-900 text-white">
+                    6. ILT20 Special
                   </option>
                 </select>
               </div>
