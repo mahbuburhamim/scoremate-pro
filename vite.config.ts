@@ -7,7 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 function liveSyncPlugin(): Plugin {
-  const STORAGE_FILE = path.resolve(__dirname, '.server_matches.json');
+  const rootDir = typeof import.meta.dirname !== 'undefined' ? import.meta.dirname : process.cwd();
+  const STORAGE_FILE = path.resolve(rootDir, '.server_matches.json');
 
   function readCachedData(): { matches: any[] | null; activeMatchId: string | null } {
     try {
@@ -38,11 +39,8 @@ function liveSyncPlugin(): Plugin {
   let cachedData = readCachedData();
   const sseClients = new Set<ServerResponse>();
 
-  return {
-    name: 'live-sync-plugin',
-    configureServer(server) {
-      server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        const url = req.url?.split('?')[0];
+  const middleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    const url = req.url?.split('?')[0];
 
         // 1. SSE Real-time stream for OBS Studio and external devices
         if (url === '/api/events') {
@@ -161,7 +159,15 @@ function liveSyncPlugin(): Plugin {
         }
 
         next();
-      });
+  };
+
+  return {
+    name: 'live-sync-plugin',
+    configureServer(server) {
+      server.middlewares.use(middleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware);
     },
   };
 }

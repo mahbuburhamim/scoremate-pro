@@ -139,7 +139,12 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const rawMatch = matches.find((m) => m.id === activeMatchId) || matches.find(isValidMatch);
   const activeMatch = isValidMatch(rawMatch) ? rawMatch : defaultInitialMatch;
 
-  // Sync to channel and storage
+  const activeMatchIdRef = useRef<string>(activeMatchId);
+  useEffect(() => {
+    activeMatchIdRef.current = activeMatchId;
+  }, [activeMatchId]);
+
+  // Sync to channel, local server, and global cloud relay
   const syncMatchState = useCallback(
     (updatedMatches: Match[], triggerPulse = true) => {
       const validMatches = sanitizeMatches(updatedMatches);
@@ -153,12 +158,15 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setTimeout(() => setIsSyncing(false), 800);
       }
 
+      const currentActiveId = activeMatchIdRef.current;
+
+      // 1. BroadcastChannel (same-browser tabs)
       if (channelRef.current) {
         try {
           channelRef.current.postMessage({
             type: 'MATCHES_SYNC',
             matches: validMatches,
-            activeMatchId,
+            activeMatchId: currentActiveId,
             timestamp: Date.now(),
           });
         } catch (err) {
@@ -166,24 +174,42 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // Push update to local server for OBS Studio (CEF) and external devices
+      const syncPayload = JSON.stringify({
+        type: 'MATCHES_SYNC',
+        matches: validMatches,
+        activeMatchId: currentActiveId,
+        timestamp: Date.now(),
+      });
+
+      // 2. Local Vite Server for OBS Studio (CEF)
       try {
         fetch('/api/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matches: validMatches, activeMatchId }),
+          body: syncPayload,
         }).catch(() => {});
-      } catch {
-        // ignore
-      }
+      } catch {}
+
+      // 3. Cloud Real-Time Relay (ntfy.sh) - works seamlessly across internet, devices & OBS
+      try {
+        fetch('https://ntfy.sh/scoremate_live_sync_v1', {
+          method: 'POST',
+          headers: {
+            'Title': 'MATCHES_SYNC',
+            'Content-Type': 'application/json',
+          },
+          body: syncPayload,
+        }).catch(() => {});
+      } catch {}
     },
-    [sanitizeMatches, activeMatchId]
+    [sanitizeMatches]
   );
 
   const setActiveMatchId = useCallback(
     (id: string) => {
       setActiveMatchIdState(id);
       saveActiveMatchId(id);
+      activeMatchIdRef.current = id;
 
       if (channelRef.current) {
         try {
@@ -197,20 +223,37 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
+      const changePayload = JSON.stringify({
+        type: 'ACTIVE_MATCH_CHANGE',
+        activeMatchId: id,
+        timestamp: Date.now(),
+      });
+
+      // Local server
       try {
         fetch('/api/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matches, activeMatchId: id }),
+          body: changePayload,
         }).catch(() => {});
-      } catch {
-        // ignore
-      }
+      } catch {}
+
+      // Cloud relay
+      try {
+        fetch('https://ntfy.sh/scoremate_live_sync_v1', {
+          method: 'POST',
+          headers: {
+            'Title': 'ACTIVE_MATCH_CHANGE',
+            'Content-Type': 'application/json',
+          },
+          body: changePayload,
+        }).catch(() => {});
+      } catch {}
     },
-    [matches]
+    []
   );
 
-  // Keep local server in sync on mount and whenever matches change
+  // Keep local server in sync on mount
   useEffect(() => {
     if (matches && matches.length > 0) {
       try {
@@ -219,27 +262,48 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ matches, activeMatchId }),
         }).catch(() => {});
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
-  }, [matches, activeMatchId]);
+  }, []);
 
-  // Set up BroadcastChannel + SSE (Server-Sent Events for OBS) + Storage event fallback
+  // Multi-channel Real-time Sync (Local SSE + Cloud SSE + High-speed Polling + BroadcastChannel + Storage)
   useEffect(() => {
-    // 1. Initial state fetch from local server (for OBS Studio on first load)
-    fetch('/api/match')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-          const sanitized = sanitizeMatches(data.matches);
-          setMatches(sanitized);
-          if (data.activeMatchId && sanitized.some((m: any) => m.id === data.activeMatchId)) {
-            setActiveMatchIdState(data.activeMatchId);
-            saveActiveMatchId(data.activeMatchId);
+    const applyMatchesIfChanged = (newMatches: any[], newActiveId?: string) => {
+      if (!Array.isArray(newMatches) || newMatches.length === 0) return;
+      const sanitized = sanitizeMatches(newMatches);
+
+      setMatches((current) => {
+        const isDifferent =
+          sanitized.length !== current.length ||
+          JSON.stringify(sanitized) !== JSON.stringify(current);
+
+        if (isDifferent) {
+          saveMatches(sanitized);
+          return sanitized;
+        }
+        return current;
+      });
+
+      if (newActiveId) {
+        setActiveMatchIdState((currActiveId) => {
+          if (currActiveId !== newActiveId && sanitized.some((m) => m.id === newActiveId)) {
+            saveActiveMatchId(newActiveId);
+            activeMatchIdRef.current = newActiveId;
+            return newActiveId;
           }
+          return currActiveId;
+        });
+      }
+    };
+
+    // 1. Initial state fetch from local server
+    fetch('/api/match')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
+          applyMatchesIfChanged(data.matches, data.activeMatchId);
         } else {
-          // Server has no cached matches yet; push client matches to populate server cache
+          // Push initial local matches to server if server is empty
           const localMatches = getStoredMatches();
           const storedActive = getStoredActiveMatchId();
           if (localMatches && localMatches.length > 0) {
@@ -256,72 +320,83 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       })
       .catch(() => {});
 
-    // 2. Server-Sent Events (SSE) listener for OBS Studio cross-process real-time sync
-    let eventSource: EventSource | null = null;
+    // 2. Local Server-Sent Events (SSE) listener
+    let localEventSource: EventSource | null = null;
     try {
-      eventSource = new EventSource('/api/events');
-      eventSource.onmessage = (event) => {
+      localEventSource = new EventSource('/api/events');
+      localEventSource.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data);
           if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
-            const sanitized = sanitizeMatches(parsed.matches);
-            setMatches(sanitized);
-            if (parsed.activeMatchId && sanitized.some((m: any) => m.id === parsed.activeMatchId)) {
-              setActiveMatchIdState(parsed.activeMatchId);
-              saveActiveMatchId(parsed.activeMatchId);
-            }
+            applyMatchesIfChanged(parsed.matches, parsed.activeMatchId);
           }
-        } catch {
-          // ignore
-        }
+        } catch {}
       };
     } catch (e) {
-      console.warn('SSE error', e);
+      console.warn('Local SSE not available', e);
     }
 
-    // 3. Ultra-reliable polling fallback every 800ms for OBS Browser Source
+    // 3. Cloud SSE listener (ntfy.sh) for OBS Studio & production deployments
+    let cloudEventSource: EventSource | null = null;
+    try {
+      cloudEventSource = new EventSource('https://ntfy.sh/scoremate_live_sync_v1/sse');
+      cloudEventSource.onmessage = (event) => {
+        try {
+          const parsed = JSON.parse(event.data);
+          const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
+          if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
+            applyMatchesIfChanged(payload.matches, payload.activeMatchId);
+          } else if (payload?.type === 'ACTIVE_MATCH_CHANGE' && payload.activeMatchId) {
+            setActiveMatchIdState(payload.activeMatchId);
+            saveActiveMatchId(payload.activeMatchId);
+            activeMatchIdRef.current = payload.activeMatchId;
+          }
+        } catch {}
+      };
+    } catch (e) {
+      console.warn('Cloud SSE not available', e);
+    }
+
+    // 4. Ultra-reliable polling fallback (checks local /api/match first, falls back to cloud)
     const pollInterval = setInterval(() => {
       fetch('/api/match')
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error('Local API unavailable');
+          return r.json();
+        })
         .then((data) => {
-          if (data.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-            const sanitized = sanitizeMatches(data.matches);
-            setMatches((current) => {
-              const currUpdated = current.find((m) => m.id === activeMatchId)?.updatedAt || 0;
-              const newMatch = sanitized.find((m: any) => m.id === activeMatchId);
-              const newUpdated = newMatch?.updatedAt || 0;
-              if (newUpdated > currUpdated || sanitized.length !== current.length) {
-                return sanitized;
-              }
-              return current;
-            });
-            if (data.activeMatchId && data.activeMatchId !== activeMatchId) {
-              if (sanitized.some((m: any) => m.id === data.activeMatchId)) {
-                setActiveMatchIdState(data.activeMatchId);
-                saveActiveMatchId(data.activeMatchId);
-              }
-            }
+          if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
+            applyMatchesIfChanged(data.matches, data.activeMatchId);
           }
         })
-        .catch(() => {});
-    }, 800);
+        .catch(() => {
+          // If local server is not running (e.g. production static site), poll cloud sync relay
+          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1')
+            .then((r) => r.json())
+            .then((data) => {
+              if (data?.message) {
+                const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
+                if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
+                  applyMatchesIfChanged(payload.matches, payload.activeMatchId);
+                }
+              }
+            })
+            .catch(() => {});
+        });
+    }, 600);
 
-    // 4. BroadcastChannel for same-browser instant 0ms latency
+    // 5. BroadcastChannel for same-browser instant zero-latency sync
     try {
       const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
       channelRef.current = channel;
 
       channel.onmessage = (event) => {
         if (event.data?.type === 'MATCHES_SYNC' && Array.isArray(event.data.matches)) {
-          const sanitized = sanitizeMatches(event.data.matches);
-          setMatches(sanitized);
-          if (event.data.activeMatchId && sanitized.some((m: any) => m.id === event.data.activeMatchId)) {
-            setActiveMatchIdState(event.data.activeMatchId);
-            saveActiveMatchId(event.data.activeMatchId);
-          }
+          applyMatchesIfChanged(event.data.matches, event.data.activeMatchId);
         } else if (event.data?.type === 'ACTIVE_MATCH_CHANGE' && event.data.activeMatchId) {
           setActiveMatchIdState(event.data.activeMatchId);
           saveActiveMatchId(event.data.activeMatchId);
+          activeMatchIdRef.current = event.data.activeMatchId;
         } else if (event.data?.type === 'ANIMATION_PULSE') {
           setIsSyncing(true);
           setTimeout(() => setIsSyncing(false), 600);
@@ -331,16 +406,16 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('BroadcastChannel not supported', e);
     }
 
+    // 6. Cross-tab storage listener
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'cricscorer_matches' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setMatches(parsed);
-        } catch {
-          // ignore
-        }
+          applyMatchesIfChanged(parsed);
+        } catch {}
       } else if (e.key === 'cricscorer_active_match_id' && e.newValue) {
         setActiveMatchIdState(e.newValue);
+        activeMatchIdRef.current = e.newValue;
       }
     };
 
@@ -348,11 +423,12 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => {
       channelRef.current?.close();
-      eventSource?.close();
+      localEventSource?.close();
+      cloudEventSource?.close();
       clearInterval(pollInterval);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [activeMatchId, sanitizeMatches]);
+  }, [sanitizeMatches]);
 
 
   // Cricket Scoring Logic with precise ball-by-ball resolution

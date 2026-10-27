@@ -30,23 +30,83 @@ export const OverlayPage: React.FC = () => {
   const [directMatch, setDirectMatch] = useState<any>(null);
 
   useEffect(() => {
-    if (matchId && matchId !== 'active') {
-      const found = matches.find((m) => m.id === matchId);
-      if (found) {
-        setDirectMatch(found);
+    const resolveAndSet = (list: any[], activeId?: string) => {
+      if (!Array.isArray(list) || list.length === 0) return;
+      let target: any = null;
+      if (matchId && matchId !== 'active') {
+        target = list.find((m) => m.id === matchId);
       } else {
-        // Immediate server fetch if matchId not in local context yet
-        fetch('/api/match')
-          .then((r) => r.json())
-          .then((data) => {
-            if (data.matches && Array.isArray(data.matches)) {
-              const m = data.matches.find((item: any) => item.id === matchId);
-              if (m) setDirectMatch(m);
-            }
-          })
-          .catch(() => {});
+        const idToUse = activeId || list[0]?.id;
+        target = list.find((m) => m.id === idToUse) || list[0];
       }
+      if (target) {
+        setDirectMatch(target);
+      }
+    };
+
+    // 1. Initial resolution from matches context
+    if (matches && matches.length > 0) {
+      resolveAndSet(matches);
     }
+
+    // 2. Direct Cloud SSE (ntfy.sh) - works across OBS Studio and live deployments
+    let cloudSse: EventSource | null = null;
+    try {
+      cloudSse = new EventSource('https://ntfy.sh/scoremate_live_sync_v1/sse');
+      cloudSse.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
+          if (payload?.matches && Array.isArray(payload.matches)) {
+            resolveAndSet(payload.matches, payload.activeMatchId);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    // 3. Local SSE (/api/events)
+    let localSse: EventSource | null = null;
+    try {
+      localSse = new EventSource('/api/events');
+      localSse.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          if (parsed?.matches && Array.isArray(parsed.matches)) {
+            resolveAndSet(parsed.matches, parsed.activeMatchId);
+          }
+        } catch {}
+      };
+    } catch {}
+
+    // 4. Fast polling fallback (checks local /api/match first, falls back to cloud)
+    const pollTimer = setInterval(() => {
+      fetch('/api/match')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.matches && Array.isArray(data.matches)) {
+            resolveAndSet(data.matches, data.activeMatchId);
+          }
+        })
+        .catch(() => {
+          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1')
+            .then((r) => r.json())
+            .then((data) => {
+              if (data?.message) {
+                const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
+                if (payload?.matches && Array.isArray(payload.matches)) {
+                  resolveAndSet(payload.matches, payload.activeMatchId);
+                }
+              }
+            })
+            .catch(() => {});
+        });
+    }, 500);
+
+    return () => {
+      cloudSse?.close();
+      localSse?.close();
+      clearInterval(pollTimer);
+    };
   }, [matchId, matches]);
 
   // Match lookup with direct match fallback
