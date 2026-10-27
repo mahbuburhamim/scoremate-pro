@@ -100,7 +100,8 @@ export const LinksPage: React.FC = () => {
 
   const getOverlayUrl = (theme: OverlayTheme, cameraFi = false) => {
     const origin = window.location.origin;
-    const base = `${origin}/overlay/${currentMatch.id}?theme=${theme}&transparent=true`;
+    const targetId = selectedMatchId === 'active' ? 'active' : currentMatch.id;
+    const base = `${origin}/overlay/${targetId}?theme=${theme}&transparent=true`;
     return cameraFi ? `${base}&camerafi=1` : base;
   };
 
@@ -134,10 +135,13 @@ export const LinksPage: React.FC = () => {
               value={selectedMatchId}
               onChange={(e) => {
                 setSelectedMatchId(e.target.value);
-                setActiveMatchId(e.target.value);
+                if (e.target.value !== 'active') {
+                  setActiveMatchId(e.target.value);
+                }
               }}
               className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs sm:text-sm text-blue-600 font-bold focus:outline-none focus:border-blue-500 focus:bg-white"
             >
+              <option value="active">⚡ Live Active Match (Auto-Switches with Controller)</option>
               {matches.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.team1.name} vs {m.team2.name} ({m.matchNo})

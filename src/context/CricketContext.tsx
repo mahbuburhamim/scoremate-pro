@@ -71,6 +71,7 @@ interface CricketContextType {
   }) => Match;
   manualSyncPulse: () => void;
   isSyncing: boolean;
+  applySyncMatches: (matches: Match[], activeId?: string) => void;
 }
 
 const CricketContext = createContext<CricketContextType | null>(null);
@@ -266,9 +267,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Multi-channel Real-time Sync (Local SSE + Cloud SSE + High-speed Polling + BroadcastChannel + Storage)
-  useEffect(() => {
-    const applyMatchesIfChanged = (newMatches: any[], newActiveId?: string) => {
+  const applySyncMatches = useCallback(
+    (newMatches: any[], newActiveId?: string) => {
       if (!Array.isArray(newMatches) || newMatches.length === 0) return;
       const sanitized = sanitizeMatches(newMatches);
 
@@ -294,14 +294,18 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return currActiveId;
         });
       }
-    };
+    },
+    [sanitizeMatches]
+  );
 
-    // 1. Initial state fetch from local server
-    fetch('/api/match')
+  // Multi-channel Real-time Sync (Local SSE + Cloud SSE + High-speed Polling + BroadcastChannel + Storage)
+  useEffect(() => {
+    // 1. Initial state fetch from local server (guaranteed cache-busted)
+    fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-          applyMatchesIfChanged(data.matches, data.activeMatchId);
+          applySyncMatches(data.matches, data.activeMatchId);
         } else {
           // Push initial local matches to server if server is empty
           const localMatches = getStoredMatches();
@@ -320,7 +324,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       })
       .catch(() => {});
 
-    // 2. Local Server-Sent Events (SSE) listener
+    // 2. Local Server-Sent Events (SSE) listener (zero-latency instant push)
     let localEventSource: EventSource | null = null;
     try {
       localEventSource = new EventSource('/api/events');
@@ -328,7 +332,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           const parsed = JSON.parse(event.data);
           if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
-            applyMatchesIfChanged(parsed.matches, parsed.activeMatchId);
+            applySyncMatches(parsed.matches, parsed.activeMatchId);
           }
         } catch {}
       };
@@ -345,7 +349,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const parsed = JSON.parse(event.data);
           const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
           if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-            applyMatchesIfChanged(payload.matches, payload.activeMatchId);
+            applySyncMatches(payload.matches, payload.activeMatchId);
           } else if (payload?.type === 'ACTIVE_MATCH_CHANGE' && payload.activeMatchId) {
             setActiveMatchIdState(payload.activeMatchId);
             saveActiveMatchId(payload.activeMatchId);
@@ -359,31 +363,44 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 4. Ultra-reliable polling fallback (checks local /api/match first, falls back to cloud)
     const pollInterval = setInterval(() => {
-      fetch('/api/match')
+      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => {
           if (!r.ok) throw new Error('Local API unavailable');
           return r.json();
         })
         .then((data) => {
           if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-            applyMatchesIfChanged(data.matches, data.activeMatchId);
+            applySyncMatches(data.matches, data.activeMatchId);
           }
         })
         .catch(() => {
-          // If local server is not running (e.g. production static site), poll cloud sync relay
-          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1')
-            .then((r) => r.json())
-            .then((data) => {
-              if (data?.message) {
-                const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
-                if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-                  applyMatchesIfChanged(payload.matches, payload.activeMatchId);
-                }
+          // If local server is not running (e.g. production static site), poll cloud sync relay with short timeout
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 1200);
+          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1&since=1m', {
+            signal: controller.signal,
+          })
+            .then((r) => r.text())
+            .then((text) => {
+              clearTimeout(timer);
+              const lines = text.trim().split('\n');
+              for (const line of lines) {
+                try {
+                  const data = JSON.parse(line);
+                  if (data?.message) {
+                    const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
+                    if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
+                      applySyncMatches(payload.matches, payload.activeMatchId);
+                    }
+                  }
+                } catch {}
               }
             })
-            .catch(() => {});
+            .catch(() => {
+              clearTimeout(timer);
+            });
         });
-    }, 600);
+    }, 250);
 
     // 5. BroadcastChannel for same-browser instant zero-latency sync
     try {
@@ -392,7 +409,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       channel.onmessage = (event) => {
         if (event.data?.type === 'MATCHES_SYNC' && Array.isArray(event.data.matches)) {
-          applyMatchesIfChanged(event.data.matches, event.data.activeMatchId);
+          applySyncMatches(event.data.matches, event.data.activeMatchId);
         } else if (event.data?.type === 'ACTIVE_MATCH_CHANGE' && event.data.activeMatchId) {
           setActiveMatchIdState(event.data.activeMatchId);
           saveActiveMatchId(event.data.activeMatchId);
@@ -411,7 +428,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (e.key === 'cricscorer_matches' && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          applyMatchesIfChanged(parsed);
+          applySyncMatches(parsed);
         } catch {}
       } else if (e.key === 'cricscorer_active_match_id' && e.newValue) {
         setActiveMatchIdState(e.newValue);
@@ -1117,6 +1134,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         createMatch,
         manualSyncPulse,
         isSyncing,
+        applySyncMatches,
       }}
     >
       {children}

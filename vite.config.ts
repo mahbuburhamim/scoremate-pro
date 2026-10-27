@@ -39,126 +39,160 @@ function liveSyncPlugin(): Plugin {
   let cachedData = readCachedData();
   const sseClients = new Set<ServerResponse>();
 
+  // Periodic SSE ping to keep OBS Studio CEF connections alive
+  setInterval(() => {
+    for (const client of sseClients) {
+      try {
+        client.write(':ping\n\n');
+      } catch {
+        sseClients.delete(client);
+      }
+    }
+  }, 10000);
+
   const middleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    // 0. Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Max-Age': '86400',
+      });
+      res.end();
+      return;
+    }
+
     const url = req.url?.split('?')[0];
 
-        // 1. SSE Real-time stream for OBS Studio and external devices
-        if (url === '/api/events') {
-          res.writeHead(200, {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*',
-          });
-          res.write(':\n\n'); // SSE comment to keep connection alive
-          sseClients.add(res);
+    // 1. SSE Real-time stream for OBS Studio (CEF) and external devices
+    if (url === '/api/events') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.write(': connected\n\n');
+      sseClients.add(res);
 
-          if (!cachedData.matches) {
-            cachedData = readCachedData();
-          }
+      const freshData = readCachedData();
+      if (freshData.matches) {
+        cachedData = freshData;
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'MATCHES_SYNC',
+            matches: cachedData.matches,
+            activeMatchId: cachedData.activeMatchId,
+            timestamp: Date.now(),
+          })}\n\n`
+        );
+      }
 
-          if (cachedData.matches) {
-            res.write(
-              `data: ${JSON.stringify({
-                type: 'MATCHES_SYNC',
-                matches: cachedData.matches,
-                activeMatchId: cachedData.activeMatchId,
-              })}\n\n`
-            );
-          }
+      req.on('close', () => {
+        sseClients.delete(res);
+      });
+      return;
+    }
 
-          req.on('close', () => {
-            sseClients.delete(res);
-          });
-          return;
-        }
+    // 2. POST update from Controller / Browser
+    if (url === '/api/match' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body);
+          if (
+            data.matches &&
+            Array.isArray(data.matches) &&
+            data.matches.some((m: any) => m && m.team1 && m.innings)
+          ) {
+            const activeId = data.activeMatchId || cachedData.activeMatchId || data.matches[0]?.id;
+            cachedData = {
+              matches: data.matches,
+              activeMatchId: activeId,
+            };
+            writeCachedData(cachedData);
 
-        // 2. POST update from Controller / Browser
-        if (url === '/api/match' && req.method === 'POST') {
-          let body = '';
-          req.on('data', (chunk) => {
-            body += chunk;
-          });
-          req.on('end', () => {
-            try {
-              const data = JSON.parse(body);
-              if (
-                data.matches &&
-                Array.isArray(data.matches) &&
-                data.matches.some((m: any) => m && m.team1 && m.innings)
-              ) {
-                const activeId = data.activeMatchId || cachedData.activeMatchId || data.matches[0]?.id;
-                cachedData = {
-                  matches: data.matches,
-                  activeMatchId: activeId,
-                };
-                writeCachedData(cachedData);
-
-                const payload = `data: ${JSON.stringify({
-                  type: 'MATCHES_SYNC',
-                  matches: cachedData.matches,
-                  activeMatchId: cachedData.activeMatchId,
-                })}\n\n`;
-                for (const client of sseClients) {
-                  try {
-                    client.write(payload);
-                  } catch {
-                    sseClients.delete(client);
-                  }
-                }
-              } else if (data.activeMatchId) {
-                cachedData.activeMatchId = data.activeMatchId;
-                writeCachedData(cachedData);
-                const payload = `data: ${JSON.stringify({
-                  type: 'MATCHES_SYNC',
-                  matches: cachedData.matches,
-                  activeMatchId: cachedData.activeMatchId,
-                })}\n\n`;
-                for (const client of sseClients) {
-                  try {
-                    client.write(payload);
-                  } catch {
-                    sseClients.delete(client);
-                  }
-                }
-              } else if (data.reset) {
-                cachedData = { matches: null, activeMatchId: null };
-                try {
-                  if (fs.existsSync(STORAGE_FILE)) fs.unlinkSync(STORAGE_FILE);
-                } catch {}
+            const payload = `data: ${JSON.stringify({
+              type: 'MATCHES_SYNC',
+              matches: cachedData.matches,
+              activeMatchId: cachedData.activeMatchId,
+              timestamp: Date.now(),
+            })}\n\n`;
+            for (const client of sseClients) {
+              try {
+                client.write(payload);
+              } catch {
+                sseClients.delete(client);
               }
-              res.writeHead(200, {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-              });
-              res.end(JSON.stringify({ success: true, activeMatchId: cachedData.activeMatchId }));
-            } catch {
-              res.writeHead(400);
-              res.end(JSON.stringify({ error: 'Invalid JSON' }));
             }
-          });
-          return;
-        }
-
-        // 3. GET current match state
-        if (url === '/api/match' && req.method === 'GET') {
-          if (!cachedData.matches) {
-            cachedData = readCachedData();
+          } else if (data.activeMatchId) {
+            cachedData.activeMatchId = data.activeMatchId;
+            writeCachedData(cachedData);
+            const payload = `data: ${JSON.stringify({
+              type: 'MATCHES_SYNC',
+              matches: cachedData.matches,
+              activeMatchId: cachedData.activeMatchId,
+              timestamp: Date.now(),
+            })}\n\n`;
+            for (const client of sseClients) {
+              try {
+                client.write(payload);
+              } catch {
+                sseClients.delete(client);
+              }
+            }
+          } else if (data.reset) {
+            cachedData = { matches: null, activeMatchId: null };
+            try {
+              if (fs.existsSync(STORAGE_FILE)) fs.unlinkSync(STORAGE_FILE);
+            } catch {}
           }
           res.writeHead(200, {
             'Content-Type': 'application/json',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
             'Access-Control-Allow-Origin': '*',
           });
-          res.end(
-            JSON.stringify({
-              matches: cachedData.matches,
-              activeMatchId: cachedData.activeMatchId,
-            })
-          );
-          return;
+          res.end(JSON.stringify({ success: true, activeMatchId: cachedData.activeMatchId }));
+        } catch {
+          res.writeHead(400, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
         }
+      });
+      return;
+    }
 
-        next();
+    // 3. GET current match state (guaranteed fresh with strict no-cache headers for OBS CEF)
+    if (url === '/api/match' && req.method === 'GET') {
+      const freshData = readCachedData();
+      if (freshData.matches) {
+        cachedData = freshData;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(
+        JSON.stringify({
+          matches: cachedData.matches,
+          activeMatchId: cachedData.activeMatchId,
+          timestamp: Date.now(),
+        })
+      );
+      return;
+    }
+
+    next();
   };
 
   return {

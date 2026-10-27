@@ -16,7 +16,7 @@ import { Eye, EyeOff, Palette, Monitor } from 'lucide-react';
 export const OverlayPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { matches, activeMatch, clearAnimation } = useCricket();
+  const { matches, activeMatch, clearAnimation, applySyncMatches } = useCricket();
 
   const themeParam = (searchParams.get('theme') as OverlayTheme) || 'cricpic';
   const transparentParam = searchParams.get('transparent') !== 'false';
@@ -26,11 +26,13 @@ export const OverlayPage: React.FC = () => {
   const [showTestBar, setShowTestBar] = useState<boolean>(true);
   const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
-  // Direct match lookup state for immediate resolution if context hasn't loaded match yet
+  // Direct match lookup state for immediate resolution from live SSE / API feeds
   const [directMatch, setDirectMatch] = useState<any>(null);
+  const [syncStatus, setSyncStatus] = useState<'connected' | 'polling' | 'disconnected'>('polling');
 
-  useEffect(() => {
-    const resolveAndSet = (list: any[], activeId?: string) => {
+  // Resolve match from payload and update direct state and context
+  const resolveAndSet = React.useCallback(
+    (list: any[], activeId?: string) => {
       if (!Array.isArray(list) || list.length === 0) return;
       let target: any = null;
       if (matchId && matchId !== 'active') {
@@ -40,16 +42,44 @@ export const OverlayPage: React.FC = () => {
         target = list.find((m) => m.id === idToUse) || list[0];
       }
       if (target) {
-        setDirectMatch(target);
+        setDirectMatch((prev: any) => {
+          if (!prev || JSON.stringify(prev) !== JSON.stringify(target)) {
+            return target;
+          }
+          return prev;
+        });
+        setSyncStatus('connected');
       }
-    };
+      // Keep entire CricketContext updated
+      if (applySyncMatches) {
+        applySyncMatches(list, activeId);
+      }
+    },
+    [matchId, applySyncMatches]
+  );
 
+  useEffect(() => {
     // 1. Initial resolution from matches context
     if (matches && matches.length > 0) {
       resolveAndSet(matches);
     }
 
-    // 2. Direct Cloud SSE (ntfy.sh) - works across OBS Studio and live deployments
+    // 2. Direct Local SSE (/api/events) - instant zero-latency push for OBS Studio CEF
+    let localSse: EventSource | null = null;
+    try {
+      localSse = new EventSource('/api/events');
+      localSse.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          if (parsed?.matches && Array.isArray(parsed.matches)) {
+            resolveAndSet(parsed.matches, parsed.activeMatchId);
+          }
+        } catch {}
+      };
+      localSse.onopen = () => setSyncStatus('connected');
+    } catch {}
+
+    // 3. Direct Cloud SSE (ntfy.sh) - works across remote devices, live deployments & OBS
     let cloudSse: EventSource | null = null;
     try {
       cloudSse = new EventSource('https://ntfy.sh/scoremate_live_sync_v1/sse');
@@ -64,23 +94,9 @@ export const OverlayPage: React.FC = () => {
       };
     } catch {}
 
-    // 3. Local SSE (/api/events)
-    let localSse: EventSource | null = null;
-    try {
-      localSse = new EventSource('/api/events');
-      localSse.onmessage = (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          if (parsed?.matches && Array.isArray(parsed.matches)) {
-            resolveAndSet(parsed.matches, parsed.activeMatchId);
-          }
-        } catch {}
-      };
-    } catch {}
-
-    // 4. Fast polling fallback (checks local /api/match first, falls back to cloud)
+    // 4. Fast polling fallback (checks local /api/match first with cache-buster)
     const pollTimer = setInterval(() => {
-      fetch('/api/match')
+      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (data?.matches && Array.isArray(data.matches)) {
@@ -88,29 +104,58 @@ export const OverlayPage: React.FC = () => {
           }
         })
         .catch(() => {
-          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1')
-            .then((r) => r.json())
-            .then((data) => {
-              if (data?.message) {
-                const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
-                if (payload?.matches && Array.isArray(payload.matches)) {
-                  resolveAndSet(payload.matches, payload.activeMatchId);
-                }
+          // Cloud fallback with 1.2s timeout so sockets are never blocked
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 1200);
+          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1&since=1m', {
+            signal: controller.signal,
+          })
+            .then((r) => r.text())
+            .then((text) => {
+              clearTimeout(timer);
+              const lines = text.trim().split('\n');
+              for (const line of lines) {
+                try {
+                  const data = JSON.parse(line);
+                  if (data?.message) {
+                    const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
+                    if (payload?.matches && Array.isArray(payload.matches)) {
+                      resolveAndSet(payload.matches, payload.activeMatchId);
+                    }
+                  }
+                } catch {}
               }
             })
-            .catch(() => {});
+            .catch(() => {
+              clearTimeout(timer);
+            });
         });
-    }, 500);
+    }, 250);
 
     return () => {
-      cloudSse?.close();
       localSse?.close();
+      cloudSse?.close();
       clearInterval(pollTimer);
     };
-  }, [matchId, matches]);
+  }, [matchId, resolveAndSet]);
 
-  // Match lookup with direct match fallback
-  const match = (matchId && matchId !== 'active' ? matches.find((m) => m.id === matchId) : null) || directMatch || activeMatch;
+  // CRITICAL FIX FOR OBS: Direct live match takes precedence over stale context matches!
+  const contextMatch = (matchId && matchId !== 'active')
+    ? matches.find((m) => m.id === matchId)
+    : activeMatch;
+
+  const match = (() => {
+    if (directMatch) {
+      if (!matchId || matchId === 'active' || directMatch.id === matchId) {
+        const directTime = directMatch.updatedAt || 0;
+        const contextTime = contextMatch?.updatedAt || 0;
+        if (directTime >= contextTime || !contextTime) {
+          return directMatch;
+        }
+      }
+    }
+    return contextMatch || directMatch || activeMatch;
+  })();
 
   // Set body background to transparent if transparentParam is true
   useEffect(() => {
@@ -168,6 +213,20 @@ export const OverlayPage: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2 p-1.5 rounded-full bg-slate-950/90 border border-slate-700/80 text-xs text-white shadow-2xl backdrop-blur-md">
+              {/* Live OBS Sync Status Badge */}
+              <div className="flex items-center gap-1.5 px-2.5 border-r border-slate-800">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    syncStatus === 'connected'
+                      ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]'
+                      : 'bg-amber-400'
+                  }`}
+                />
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                  {syncStatus === 'connected' ? 'OBS LIVE' : 'SYNCING'}
+                </span>
+              </div>
+
               {/* Theme switcher */}
               <div className="flex items-center gap-1 px-2.5 border-r border-slate-800">
                 <Palette className="w-3.5 h-3.5 text-cyan-400" />
