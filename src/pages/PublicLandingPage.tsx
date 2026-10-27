@@ -29,6 +29,7 @@ import { CricPicTheme } from '../components/overlay/CricPicTheme';
 import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
+import { Special2023Theme } from '../components/overlay/Special2023Theme';
 import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import logoImg from '../assets/logo.png';
 
@@ -176,7 +177,7 @@ const demoMatch: Match = {
 
 export const PublicLandingPage: React.FC = () => {
   const { openAuthModal } = useAuth();
-  const [activeThemeTab, setActiveThemeTab] = useState<'cricpic' | 'asiacup' | 'cwc23' | 'iplneon'>('cricpic');
+  const [activeThemeTab, setActiveThemeTab] = useState<'cricpic' | 'asiacup' | 'cwc23' | 'iplneon' | 'special2023'>('cricpic');
 
   const themes = [
     {
@@ -202,6 +203,12 @@ export const PublicLandingPage: React.FC = () => {
       name: 'IPL Cyber Neon',
       desc: 'High-energy cyberpunk neon aesthetics designed for T20 night tournaments.',
       color: 'from-fuchsia-600 to-pink-500',
+    },
+    {
+      id: 'special2023',
+      name: '2023 Special',
+      desc: 'Official 2023 bilateral broadcast design with royal blue capsule pill, vibrant orange score, and ball-by-ball tracker.',
+      color: 'from-blue-700 via-indigo-600 to-sky-400',
     },
   ];
 
@@ -465,7 +472,7 @@ export const PublicLandingPage: React.FC = () => {
               VISUAL EXCELLENCE
             </span>
             <h2 className="font-heading font-black text-3xl sm:text-4xl text-slate-900 mt-4">
-              Explore 4 TV Broadcast Themes
+              Explore 5 TV Broadcast Themes
             </h2>
             <p className="mt-2 text-slate-600 text-sm max-w-xl mx-auto">
               Every theme has its own distinctive broadcast geometry, colors, typography, and layout. Select each tab to preview the actual scoreboard graphics.
@@ -513,6 +520,7 @@ export const PublicLandingPage: React.FC = () => {
                   {activeThemeTab === 'asiacup' && <AsiaCupTheme match={demoMatch} />}
                   {activeThemeTab === 'cwc23' && <CWC23Theme match={demoMatch} />}
                   {activeThemeTab === 'iplneon' && <IPLNeonTheme match={demoMatch} />}
+                  {activeThemeTab === 'special2023' && <Special2023Theme match={demoMatch} />}
                 </ResponsiveScoreboardWrapper>
               </div>
             </div>

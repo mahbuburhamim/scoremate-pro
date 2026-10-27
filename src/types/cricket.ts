@@ -113,7 +113,7 @@ export type DisplayMode =
 
 export type UmpireDecision = 'NONE' | 'PENDING' | 'OUT' | 'NOT OUT';
 
-export type OverlayTheme = 'cricpic' | 'asiacup' | 'cwc23' | 'iplneon';
+export type OverlayTheme = 'cricpic' | 'asiacup' | 'cwc23' | 'iplneon' | 'special2023';
 
 export interface AnimationTrigger {
   id: string;

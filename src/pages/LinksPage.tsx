@@ -7,6 +7,7 @@ import { CricPicTheme } from '../components/overlay/CricPicTheme';
 import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
 import { IPLNeonTheme } from '../components/overlay/IPLNeonTheme';
+import { Special2023Theme } from '../components/overlay/Special2023Theme';
 import { ResponsiveScoreboardWrapper } from '../components/ResponsiveScoreboardWrapper';
 import {
   Copy,
@@ -71,6 +72,14 @@ export const LinksPage: React.FC = () => {
       badge: 'CYBERPUNK',
       tier: 'Pro Included',
       description: 'Futuristic neon cyan & hot pink HUD plates with glowing borders.',
+    },
+    {
+      no: 5,
+      id: 'special2023',
+      name: '2023 Special',
+      badge: 'EXCLUSIVE',
+      tier: 'Pro Included',
+      description: 'Official 2023 bilateral capsule theme with vibrant orange score, stacked dual batters & live ball tracker.',
     },
   ];
 
@@ -172,6 +181,7 @@ export const LinksPage: React.FC = () => {
                 {previewTheme === 'asiacup' && <AsiaCupTheme match={currentMatch} />}
                 {previewTheme === 'cwc23' && <CWC23Theme match={currentMatch} />}
                 {previewTheme === 'iplneon' && <IPLNeonTheme match={currentMatch} />}
+                {previewTheme === 'special2023' && <Special2023Theme match={currentMatch} />}
               </ResponsiveScoreboardWrapper>
             </div>
           </div>
