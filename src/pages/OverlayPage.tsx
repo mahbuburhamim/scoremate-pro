@@ -96,7 +96,7 @@ export const OverlayPage: React.FC = () => {
 
     // 4. Fast polling fallback (checks local /api/match first with cache-buster)
     const pollTimer = setInterval(() => {
-      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
+      fetch(`/api/match?matchId=${matchId || ''}&_t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (data?.matches && Array.isArray(data.matches)) {

@@ -18,9 +18,11 @@ import {
   getStoredTournaments,
   saveTournaments,
   defaultInitialMatch,
+  createFreshInitialMatch,
   getStoredActiveMatchId,
   saveActiveMatchId,
 } from '../utils/storage';
+import { useAuth } from './AuthContext';
 
 interface AddBallArgs {
   runs: number;
@@ -92,30 +94,37 @@ const isValidMatch = (m: any): m is Match => {
 };
 
 export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const currentUserId = user?.id || 'guest';
+  const currentUserIdRef = useRef<string>(currentUserId);
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
+
   const sanitizeMatches = useCallback((list: any[]): Match[] => {
-    if (!Array.isArray(list)) return [defaultInitialMatch];
+    if (!Array.isArray(list)) return [createFreshInitialMatch()];
     let filtered = list.filter(isValidMatch);
     filtered = filtered.filter((m) => m.id !== 'match-ind-aus-final');
     if (filtered.length === 0) {
-      filtered = [defaultInitialMatch];
+      filtered = [createFreshInitialMatch()];
     }
     return filtered;
   }, []);
 
-  const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments());
+  const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments(currentUserId));
   const [matches, setMatches] = useState<Match[]>(() => {
-    const stored = getStoredMatches();
+    const stored = getStoredMatches(currentUserId);
     const sanitized = stored.filter((m) => m.id !== 'match-ind-aus-final');
-    return sanitized.length > 0 ? sanitized : [defaultInitialMatch];
+    return sanitized.length > 0 ? sanitized : [createFreshInitialMatch()];
   });
   const [activeMatchId, setActiveMatchIdState] = useState<string>(() => {
-    const storedId = getStoredActiveMatchId();
-    const list = getStoredMatches();
+    const storedId = getStoredActiveMatchId(currentUserId);
+    const list = getStoredMatches(currentUserId);
     const sanitized = list.filter((m) => m.id !== 'match-ind-aus-final');
     if (storedId && sanitized.some((m) => m.id === storedId)) {
       return storedId;
     }
-    return sanitized[0]?.id || defaultInitialMatch.id;
+    return sanitized[0]?.id || (list[0]?.id || defaultInitialMatch.id);
   });
 
   const [undoStack, setUndoStack] = useState<Match[]>([]);
@@ -125,13 +134,32 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Active match getter with bulletproof fallback
   const rawMatch = matches.find((m) => m.id === activeMatchId) || matches.find(isValidMatch);
-  const activeMatch = isValidMatch(rawMatch) ? rawMatch : defaultInitialMatch;
+  const activeMatch = isValidMatch(rawMatch) ? rawMatch : (matches[0] || defaultInitialMatch);
 
   const activeMatchIdRef = useRef<string>(activeMatchId);
   const lastLocalActionTimestampRef = useRef<number>(Date.now());
   useEffect(() => {
     activeMatchIdRef.current = activeMatchId;
   }, [activeMatchId]);
+
+  // Account switch effect: when user logs in, signs up, or logs out, reload their isolated matches & tournaments
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+    const loadedTournaments = getStoredTournaments(currentUserId);
+    const loadedMatches = getStoredMatches(currentUserId);
+    const storedActive = getStoredActiveMatchId(currentUserId);
+    const sanitized = loadedMatches.filter((m) => m.id !== 'match-ind-aus-final');
+    const finalMatches = sanitized.length > 0 ? sanitized : [createFreshInitialMatch()];
+    const validActive = (storedActive && finalMatches.some((m) => m.id === storedActive))
+      ? storedActive
+      : (finalMatches[0]?.id || defaultInitialMatch.id);
+
+    setTournaments(loadedTournaments);
+    setMatches(finalMatches);
+    setActiveMatchIdState(validActive);
+    activeMatchIdRef.current = validActive;
+    setUndoStack([]);
+  }, [currentUserId]);
 
   // Sync to channel, local server, and global cloud relay
   const syncMatchState = useCallback(
@@ -140,15 +168,16 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const validMatches = sanitizeMatches(updatedMatches);
       if (validMatches.length === 0) return;
 
+      const uid = currentUserIdRef.current;
       const currentActiveId = explicitActiveId || activeMatchIdRef.current;
       if (explicitActiveId) {
         setActiveMatchIdState(explicitActiveId);
-        saveActiveMatchId(explicitActiveId);
+        saveActiveMatchId(explicitActiveId, uid);
         activeMatchIdRef.current = explicitActiveId;
       }
 
       setMatches(validMatches);
-      saveMatches(validMatches);
+      saveMatches(validMatches, uid);
 
       if (triggerPulse) {
         setIsSyncing(true);
@@ -160,6 +189,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           channelRef.current.postMessage({
             type: 'MATCHES_SYNC',
+            userId: uid,
             matches: validMatches,
             activeMatchId: currentActiveId,
             timestamp: Date.now(),
@@ -171,6 +201,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const syncPayload = JSON.stringify({
         type: 'MATCHES_SYNC',
+        userId: uid,
         matches: validMatches,
         activeMatchId: currentActiveId,
         timestamp: Date.now(),
@@ -185,9 +216,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }).catch(() => {});
       } catch {}
 
-      // 3. Cloud Real-Time Relay (ntfy.sh) - works seamlessly across internet, devices & OBS
+      // 3. Cloud Real-Time Relay (ntfy.sh) - scoped by user ID
       try {
-        fetch('https://ntfy.sh/scoremate_live_sync_v1', {
+        fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1`, {
           method: 'POST',
           headers: {
             'Title': 'MATCHES_SYNC',
@@ -202,15 +233,17 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const setActiveMatchId = useCallback(
     (id: string) => {
+      const uid = currentUserIdRef.current;
       lastLocalActionTimestampRef.current = Date.now();
       setActiveMatchIdState(id);
-      saveActiveMatchId(id);
+      saveActiveMatchId(id, uid);
       activeMatchIdRef.current = id;
 
       if (channelRef.current) {
         try {
           channelRef.current.postMessage({
             type: 'ACTIVE_MATCH_CHANGE',
+            userId: uid,
             activeMatchId: id,
             timestamp: Date.now(),
           });
@@ -221,6 +254,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const changePayload = JSON.stringify({
         type: 'ACTIVE_MATCH_CHANGE',
+        userId: uid,
         activeMatchId: id,
         timestamp: Date.now(),
       });
@@ -236,7 +270,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       // Cloud relay
       try {
-        fetch('https://ntfy.sh/scoremate_live_sync_v1', {
+        fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1`, {
           method: 'POST',
           headers: {
             'Title': 'ACTIVE_MATCH_CHANGE',
@@ -249,19 +283,6 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     []
   );
 
-  // Keep local server in sync on mount
-  useEffect(() => {
-    if (matches && matches.length > 0) {
-      try {
-        fetch('/api/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matches, activeMatchId }),
-        }).catch(() => {});
-      } catch {}
-    }
-  }, []);
-
   const applySyncMatches = useCallback(
     (newMatches: any[], newActiveId?: string, msgTimestamp?: number) => {
       if (!Array.isArray(newMatches) || newMatches.length === 0) return;
@@ -269,6 +290,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return; // Stale incoming sync - ignore to prevent overwriting local state
       }
       const sanitized = sanitizeMatches(newMatches);
+      const uid = currentUserIdRef.current;
 
       setMatches((current) => {
         const isDifferent =
@@ -276,7 +298,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
           JSON.stringify(sanitized) !== JSON.stringify(current);
 
         if (isDifferent) {
-          saveMatches(sanitized);
+          saveMatches(sanitized, uid);
           return sanitized;
         }
         return current;
@@ -285,7 +307,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (newActiveId) {
         setActiveMatchIdState((currActiveId) => {
           if (currActiveId !== newActiveId && sanitized.some((m) => m.id === newActiveId)) {
-            saveActiveMatchId(newActiveId);
+            saveActiveMatchId(newActiveId, uid);
             activeMatchIdRef.current = newActiveId;
             return newActiveId;
           }
@@ -298,23 +320,29 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Multi-channel Real-time Sync (Local SSE + Cloud SSE + High-speed Polling + BroadcastChannel + Storage)
   useEffect(() => {
-    // 1. Initial state fetch from local server (guaranteed cache-busted)
-    fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
+    const uid = currentUserId;
+
+    // 1. Initial state fetch from local server for current user (guaranteed cache-busted)
+    fetch(`/api/match?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-          applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
+          if (!data.userId || data.userId === uid) {
+            applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
+          }
         } else {
-          // Push initial local matches to server if server is empty
-          const localMatches = getStoredMatches();
-          const storedActive = getStoredActiveMatchId();
+          // Push initial local matches to server if server is empty for this user
+          const localMatches = getStoredMatches(uid);
+          const storedActive = getStoredActiveMatchId(uid);
           if (localMatches && localMatches.length > 0) {
             fetch('/api/match', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
+                userId: uid,
                 matches: localMatches,
                 activeMatchId: storedActive || localMatches[0]?.id,
+                timestamp: Date.now(),
               }),
             }).catch(() => {});
           }
@@ -330,7 +358,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           const parsed = JSON.parse(event.data);
           if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
-            applySyncMatches(parsed.matches, parsed.activeMatchId, parsed.timestamp);
+            if (!parsed.userId || parsed.userId === uid) {
+              applySyncMatches(parsed.matches, parsed.activeMatchId, parsed.timestamp);
+            }
           }
         } catch {}
       };
@@ -341,18 +371,22 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // 3. Cloud SSE listener (ntfy.sh) for OBS Studio & production deployments
     let cloudEventSource: EventSource | null = null;
     try {
-      cloudEventSource = new EventSource('https://ntfy.sh/scoremate_live_sync_v1/sse');
+      cloudEventSource = new EventSource(`https://ntfy.sh/scoremate_${uid}_sync_v1/sse`);
       cloudEventSource.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data);
           const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
           if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-            applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
+            if (!payload.userId || payload.userId === uid) {
+              applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
+            }
           } else if (payload?.type === 'ACTIVE_MATCH_CHANGE' && payload.activeMatchId) {
-            if (!payload.timestamp || payload.timestamp >= lastLocalActionTimestampRef.current) {
-              setActiveMatchIdState(payload.activeMatchId);
-              saveActiveMatchId(payload.activeMatchId);
-              activeMatchIdRef.current = payload.activeMatchId;
+            if (!payload.userId || payload.userId === uid) {
+              if (!payload.timestamp || payload.timestamp >= lastLocalActionTimestampRef.current) {
+                setActiveMatchIdState(payload.activeMatchId);
+                saveActiveMatchId(payload.activeMatchId, uid);
+                activeMatchIdRef.current = payload.activeMatchId;
+              }
             }
           }
         } catch {}
@@ -363,21 +397,23 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 4. Ultra-reliable polling fallback (checks local /api/match first, falls back to cloud)
     const pollInterval = setInterval(() => {
-      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
+      fetch(`/api/match?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => {
           if (!r.ok) throw new Error('Local API unavailable');
           return r.json();
         })
         .then((data) => {
           if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-            applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
+            if (!data.userId || data.userId === uid) {
+              applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
+            }
           }
         })
         .catch(() => {
           // If local server is not running (e.g. production static site), poll cloud sync relay with short timeout
           const controller = new AbortController();
           const timer = setTimeout(() => controller.abort(), 1200);
-          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1&since=1m', {
+          fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1/json?poll=1&since=1m`, {
             signal: controller.signal,
           })
             .then((r) => r.text())
@@ -390,7 +426,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
                   if (data?.message) {
                     const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
                     if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-                      applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
+                      if (!payload.userId || payload.userId === uid) {
+                        applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
+                      }
                     }
                   }
                 } catch {}
@@ -409,12 +447,16 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       channel.onmessage = (event) => {
         if (event.data?.type === 'MATCHES_SYNC' && Array.isArray(event.data.matches)) {
-          applySyncMatches(event.data.matches, event.data.activeMatchId, event.data.timestamp);
+          if (!event.data.userId || event.data.userId === uid) {
+            applySyncMatches(event.data.matches, event.data.activeMatchId, event.data.timestamp);
+          }
         } else if (event.data?.type === 'ACTIVE_MATCH_CHANGE' && event.data.activeMatchId) {
-          if (!event.data.timestamp || event.data.timestamp >= lastLocalActionTimestampRef.current) {
-            setActiveMatchIdState(event.data.activeMatchId);
-            saveActiveMatchId(event.data.activeMatchId);
-            activeMatchIdRef.current = event.data.activeMatchId;
+          if (!event.data.userId || event.data.userId === uid) {
+            if (!event.data.timestamp || event.data.timestamp >= lastLocalActionTimestampRef.current) {
+              setActiveMatchIdState(event.data.activeMatchId);
+              saveActiveMatchId(event.data.activeMatchId, uid);
+              activeMatchIdRef.current = event.data.activeMatchId;
+            }
           }
         } else if (event.data?.type === 'ANIMATION_PULSE') {
           setIsSyncing(true);
@@ -427,12 +469,14 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // 6. Cross-tab storage listener
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'cricscorer_matches' && e.newValue) {
+      const expectedMatchesKey = `cricscorer_matches_${uid}`;
+      const expectedActiveKey = `cricscorer_active_match_id_${uid}`;
+      if ((e.key === expectedMatchesKey || (uid === 'guest' && e.key === 'cricscorer_matches')) && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
           applySyncMatches(parsed);
         } catch {}
-      } else if (e.key === 'cricscorer_active_match_id' && e.newValue) {
+      } else if ((e.key === expectedActiveKey || (uid === 'guest' && e.key === 'cricscorer_active_match_id')) && e.newValue) {
         setActiveMatchIdState(e.newValue);
         activeMatchIdRef.current = e.newValue;
       }
@@ -447,7 +491,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       clearInterval(pollInterval);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [sanitizeMatches]);
+  }, [currentUserId, applySyncMatches]);
 
 
   // Cricket Scoring Logic with precise ball-by-ball resolution
@@ -901,7 +945,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
       const updated = [newTour, ...tournaments];
       setTournaments(updated);
-      saveTournaments(updated);
+      saveTournaments(updated, currentUserIdRef.current);
       return newTour;
     },
     [tournaments]
@@ -1240,15 +1284,17 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         nextActiveId = freshCleanMatch.id;
       }
 
+      const uid = currentUserIdRef.current;
       setMatches(finalMatches);
-      saveMatches(finalMatches);
+      saveMatches(finalMatches, uid);
       setActiveMatchIdState(nextActiveId);
-      saveActiveMatchId(nextActiveId);
+      saveActiveMatchId(nextActiveId, uid);
       activeMatchIdRef.current = nextActiveId;
 
       // Broadcast updated matches to OBS and all clients
       const syncPayload = JSON.stringify({
         type: 'MATCHES_SYNC',
+        userId: uid,
         matches: finalMatches,
         activeMatchId: nextActiveId,
         timestamp: Date.now(),
@@ -1258,6 +1304,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           channelRef.current.postMessage({
             type: 'MATCHES_SYNC',
+            userId: uid,
             matches: finalMatches,
             activeMatchId: nextActiveId,
             timestamp: Date.now(),
@@ -1274,7 +1321,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       } catch {}
 
       try {
-        fetch('https://ntfy.sh/scoremate_live_sync_v1', {
+        fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1`, {
           method: 'POST',
           headers: { 'Title': 'MATCH_DELETED' },
           body: syncPayload,

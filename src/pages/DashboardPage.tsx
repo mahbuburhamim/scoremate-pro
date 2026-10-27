@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCricket } from '../context/CricketContext';
 import { useAuth } from '../context/AuthContext';
 import { SubscriptionCountdown } from '../components/SubscriptionCountdown';
@@ -22,13 +22,41 @@ import {
   User,
   PlusCircle,
   ExternalLink,
+  Plus,
+  X,
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
 export const DashboardPage: React.FC = () => {
-  const { activeMatch, tournaments } = useCricket();
+  const navigate = useNavigate();
+  const { activeMatch, tournaments, createMatch } = useCricket();
   const { user } = useAuth();
   const activeInning = activeMatch.innings[activeMatch.activeInningNumber - 1];
+
+  const [showCreateMatchModal, setShowCreateMatchModal] = useState(false);
+  const [team1Name, setTeam1Name] = useState('BANGLADESH');
+  const [team2Name, setTeam2Name] = useState('ENGLAND');
+  const [matchOvers, setMatchOvers] = useState(20);
+  const [matchNo, setMatchNo] = useState('MATCH 1 • LIVE');
+  const [tossWonBy, setTossWonBy] = useState<'team1' | 'team2'>('team1');
+  const [optedTo, setOptedTo] = useState<'bat' | 'bowl'>('bat');
+
+  const handleStartNewMatch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!team1Name.trim() || !team2Name.trim()) return;
+    const tourId = tournaments[0]?.id || 'tour-default';
+    const newMatch = createMatch({
+      tournamentId: tourId,
+      team1Name: team1Name.trim(),
+      team2Name: team2Name.trim(),
+      overs: Number(matchOvers) || 20,
+      matchNo: matchNo.trim() || 'MATCH 1 • LIVE',
+      tossWonBy,
+      optedTo,
+    });
+    setShowCreateMatchModal(false);
+    navigate(`/controller/${newMatch.id}`);
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col relative overflow-hidden">
@@ -182,10 +210,17 @@ export const DashboardPage: React.FC = () => {
               </h2>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <span className="px-3 py-1 rounded-full bg-slate-100 text-xs text-slate-600 font-mono font-semibold">
                 {activeMatch.venue || 'Stadium'} • {activeMatch.matchNo}
               </span>
+              <button
+                onClick={() => setShowCreateMatchModal(true)}
+                className="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 transition shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Start New Match</span>
+              </button>
               <Link
                 to={`/controller/${activeMatch.id}`}
                 className="px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 transition shadow-md shadow-blue-500/20"
@@ -361,6 +396,145 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* CREATE NEW MATCH MODAL */}
+      {showCreateMatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-black text-xl text-slate-900">
+                    Start a New Match
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Starts completely fresh at 0 - 0 (0.0 overs)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateMatchModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 flex items-center justify-center transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleStartNewMatch} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Team 1 Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={team1Name}
+                    onChange={(e) => setTeam1Name(e.target.value)}
+                    placeholder="e.g. BANGLADESH"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Team 2 Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={team2Name}
+                    onChange={(e) => setTeam2Name(e.target.value)}
+                    placeholder="e.g. ENGLAND"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Overs Limit
+                  </label>
+                  <select
+                    value={matchOvers}
+                    onChange={(e) => setMatchOvers(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  >
+                    <option value={5}>5 Overs</option>
+                    <option value={10}>10 Overs</option>
+                    <option value={15}>15 Overs</option>
+                    <option value={20}>20 Overs (T20)</option>
+                    <option value={50}>50 Overs (ODI)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Match Title / Round
+                  </label>
+                  <input
+                    type="text"
+                    value={matchNo}
+                    onChange={(e) => setMatchNo(e.target.value)}
+                    placeholder="e.g. MATCH 1 • LIVE"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Toss Won By
+                  </label>
+                  <select
+                    value={tossWonBy}
+                    onChange={(e) => setTossWonBy(e.target.value as 'team1' | 'team2')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  >
+                    <option value="team1">{team1Name || 'Team 1'}</option>
+                    <option value="team2">{team2Name || 'Team 2'}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+                    Opted To
+                  </label>
+                  <select
+                    value={optedTo}
+                    onChange={(e) => setOptedTo(e.target.value as 'bat' | 'bowl')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                  >
+                    <option value="bat">Bat First</option>
+                    <option value="bowl">Bowl First</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateMatchModal(false)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25 active:scale-95 transition"
+                >
+                  Create & Launch Match
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

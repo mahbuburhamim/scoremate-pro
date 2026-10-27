@@ -10,10 +10,10 @@ const defaultBangladeshPlayers: Player[] = [
     shortName: 'T TAMIM',
     role: 'batsman',
     photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80',
-    runs: 64,
-    balls: 38,
-    fours: 7,
-    sixes: 3,
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
     isOut: false,
     oversBowled: 0,
     ballsBowled: 0,
@@ -34,10 +34,10 @@ const defaultBangladeshPlayers: Player[] = [
     shortName: 'N SHANTO',
     role: 'batsman',
     photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=256&q=80',
-    runs: 32,
-    balls: 19,
-    fours: 4,
-    sixes: 1,
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
     isOut: false,
     oversBowled: 0,
     ballsBowled: 0,
@@ -58,11 +58,11 @@ const defaultBangladeshPlayers: Player[] = [
     shortName: 'L DAS',
     role: 'wicketKeeper',
     photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=256&q=80',
-    runs: 28,
-    balls: 16,
-    fours: 3,
-    sixes: 1,
-    isOut: true,
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
+    isOut: false,
     oversBowled: 0,
     ballsBowled: 0,
     maidens: 0,
@@ -76,11 +76,11 @@ const defaultBangladeshPlayers: Player[] = [
     name: 'Shakib Al Hasan',
     shortName: 'SHAKIB',
     role: 'allRounder',
-    runs: 21,
-    balls: 14,
-    fours: 2,
+    runs: 0,
+    balls: 0,
+    fours: 0,
     sixes: 0,
-    isOut: true,
+    isOut: false,
     oversBowled: 0,
     ballsBowled: 0,
     maidens: 0,
@@ -94,11 +94,11 @@ const defaultBangladeshPlayers: Player[] = [
     name: 'Towhid Hridoy',
     shortName: 'T HRIDOY',
     role: 'batsman',
-    runs: 18,
-    balls: 11,
-    fours: 1,
-    sixes: 1,
-    isOut: true,
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
+    isOut: false,
     oversBowled: 0,
     ballsBowled: 0,
     maidens: 0,
@@ -230,12 +230,12 @@ const defaultEnglandPlayers: Player[] = [
     fours: 0,
     sixes: 0,
     isOut: false,
-    oversBowled: 2.4,
-    ballsBowled: 16,
+    oversBowled: 0,
+    ballsBowled: 0,
     maidens: 0,
-    runsConceded: 21,
-    wickets: 2,
-    widesConceded: 1,
+    runsConceded: 0,
+    wickets: 0,
+    widesConceded: 0,
     noBallsConceded: 0,
     tourMatches: 8,
     tourRuns: 12,
@@ -331,10 +331,10 @@ const defaultEnglandPlayers: Player[] = [
     fours: 0,
     sixes: 0,
     isOut: false,
-    oversBowled: 3,
-    ballsBowled: 18,
+    oversBowled: 0,
+    ballsBowled: 0,
     maidens: 0,
-    runsConceded: 28,
+    runsConceded: 0,
     wickets: 0,
     widesConceded: 0,
     noBallsConceded: 0,
@@ -349,10 +349,28 @@ const defaultEnglandPlayers: Player[] = [
     fours: 0,
     sixes: 0,
     isOut: false,
-    oversBowled: 2,
-    ballsBowled: 12,
+    oversBowled: 0,
+    ballsBowled: 0,
     maidens: 0,
-    runsConceded: 18,
+    runsConceded: 0,
+    wickets: 0,
+    widesConceded: 0,
+    noBallsConceded: 0,
+  },
+  {
+    id: 'eng-7',
+    name: 'Liam Livingstone',
+    shortName: 'L LIVINGSTONE',
+    role: 'allRounder',
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
+    isOut: false,
+    oversBowled: 0,
+    ballsBowled: 0,
+    maidens: 0,
+    runsConceded: 0,
     wickets: 0,
     widesConceded: 0,
     noBallsConceded: 0,
@@ -367,12 +385,12 @@ const defaultEnglandPlayers: Player[] = [
     fours: 0,
     sixes: 0,
     isOut: false,
-    oversBowled: 3,
-    ballsBowled: 18,
+    oversBowled: 0,
+    ballsBowled: 0,
     maidens: 0,
-    runsConceded: 32,
-    wickets: 1,
-    widesConceded: 1,
+    runsConceded: 0,
+    wickets: 0,
+    widesConceded: 0,
     noBallsConceded: 0,
   },
   {
@@ -385,12 +403,12 @@ const defaultEnglandPlayers: Player[] = [
     fours: 0,
     sixes: 0,
     isOut: false,
-    oversBowled: 4,
-    ballsBowled: 24,
+    oversBowled: 0,
+    ballsBowled: 0,
     maidens: 0,
-    runsConceded: 38,
+    runsConceded: 0,
     wickets: 0,
-    widesConceded: 1,
+    widesConceded: 0,
     noBallsConceded: 0,
   },
   {
@@ -403,10 +421,10 @@ const defaultEnglandPlayers: Player[] = [
     fours: 0,
     sixes: 0,
     isOut: false,
-    oversBowled: 3,
-    ballsBowled: 18,
+    oversBowled: 0,
+    ballsBowled: 0,
     maidens: 0,
-    runsConceded: 36,
+    runsConceded: 0,
     wickets: 0,
     widesConceded: 0,
     noBallsConceded: 0,
@@ -478,79 +496,17 @@ export const defaultInitialMatch: Match = {
       inningNumber: 1,
       battingTeamId: 'team-ban',
       bowlingTeamId: 'team-eng',
-      totalRuns: 176,
-      wickets: 3,
-      legalBalls: 104,
-      oversDisplay: '17.2',
-      extras: { wides: 3, noBalls: 0, byes: 1, legByes: 2, total: 6 },
+      totalRuns: 0,
+      wickets: 0,
+      legalBalls: 0,
+      oversDisplay: '0.0',
+      extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, total: 0 },
       currentStrikerId: 'ban-1',
       currentNonStrikerId: 'ban-2',
       currentBowlerId: 'eng-1',
-      currentOverBalls: [
-        {
-          id: 'b-1',
-          inningNumber: 1,
-          overIndex: 17,
-          ballNumberInOver: 1,
-          runsOffBat: 1,
-          extraRuns: 0,
-          isWicket: false,
-          strikerId: 'ban-1',
-          nonStrikerId: 'ban-2',
-          bowlerId: 'eng-1',
-          displayCode: '1',
-          timestamp: Date.now() - 45000,
-        },
-        {
-          id: 'b-2',
-          inningNumber: 1,
-          overIndex: 17,
-          ballNumberInOver: 2,
-          runsOffBat: 4,
-          extraRuns: 0,
-          isWicket: false,
-          strikerId: 'ban-2',
-          nonStrikerId: 'ban-1',
-          bowlerId: 'eng-1',
-          displayCode: '4',
-          timestamp: Date.now() - 30000,
-        },
-        {
-          id: 'b-3',
-          inningNumber: 1,
-          overIndex: 17,
-          ballNumberInOver: 2,
-          runsOffBat: 0,
-          extraRuns: 1,
-          extraType: 'wide',
-          isWicket: false,
-          strikerId: 'ban-2',
-          nonStrikerId: 'ban-1',
-          bowlerId: 'eng-1',
-          displayCode: '1wd',
-          timestamp: Date.now() - 15000,
-        },
-        {
-          id: 'b-4',
-          inningNumber: 1,
-          overIndex: 17,
-          ballNumberInOver: 3,
-          runsOffBat: 2,
-          extraRuns: 0,
-          isWicket: false,
-          strikerId: 'ban-2',
-          nonStrikerId: 'ban-1',
-          bowlerId: 'eng-1',
-          displayCode: '2',
-          timestamp: Date.now() - 5000,
-        },
-      ],
+      currentOverBalls: [],
       allBalls: [],
-      fow: [
-        { wicketNumber: 1, score: 42, overs: '4.3', playerOutName: 'Litton Das' },
-        { wicketNumber: 2, score: 89, overs: '9.5', playerOutName: 'Shakib Al Hasan' },
-        { wicketNumber: 3, score: 134, overs: '14.1', playerOutName: 'Towhid Hridoy' },
-      ],
+      fow: [],
       isCompleted: false,
     },
     {
@@ -579,16 +535,34 @@ export const STORAGE_KEYS = {
   ACTIVE_MATCH_ID: 'cricscorer_active_match_id',
 };
 
-export function getStoredTournaments(): Tournament[] {
+export function getUserStorageKey(baseKey: string, userId?: string): string {
+  if (!userId || userId === 'guest') {
+    return `${baseKey}_default`;
+  }
+  return `${baseKey}_${userId}`;
+}
+
+export function createFreshInitialMatch(): Match {
+  return {
+    ...defaultInitialMatch,
+    id: `match-${Date.now()}`,
+    matchNo: 'MATCH 1 • LIVE',
+    status: 'live',
+    updatedAt: Date.now(),
+  };
+}
+
+export function getStoredTournaments(userId?: string): Tournament[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
+    const key = getUserStorageKey(STORAGE_KEYS.TOURNAMENTS, userId);
+    const raw = localStorage.getItem(key) || (!userId || userId === 'guest' ? localStorage.getItem(STORAGE_KEYS.TOURNAMENTS) : null);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify([defaultTournament]));
+      localStorage.setItem(key, JSON.stringify([defaultTournament]));
       return [defaultTournament];
     }
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0 || parsed[0]?.name?.includes('India')) {
-      localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify([defaultTournament]));
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.setItem(key, JSON.stringify([defaultTournament]));
       return [defaultTournament];
     }
     return parsed;
@@ -598,20 +572,33 @@ export function getStoredTournaments(): Tournament[] {
   }
 }
 
-export function saveTournaments(tournaments: Tournament[]): void {
+export function saveTournaments(tournaments: Tournament[], userId?: string): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(tournaments));
+    const key = getUserStorageKey(STORAGE_KEYS.TOURNAMENTS, userId);
+    localStorage.setItem(key, JSON.stringify(tournaments));
   } catch (e) {
     console.error('Failed saving tournaments to localStorage', e);
   }
 }
 
-export function getStoredMatches(): Match[] {
+export function getStoredMatches(userId?: string): Match[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.MATCHES);
+    const key = getUserStorageKey(STORAGE_KEYS.MATCHES, userId);
+    const raw = localStorage.getItem(key);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify([defaultInitialMatch]));
-      return [defaultInitialMatch];
+      if (!userId || userId === 'guest') {
+        const legacy = localStorage.getItem(STORAGE_KEYS.MATCHES);
+        if (legacy) {
+          const parsedLegacy = JSON.parse(legacy);
+          if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
+            const valid = parsedLegacy.filter((m) => m && m.team1 && m.innings);
+            if (valid.length > 0) return valid;
+          }
+        }
+      }
+      const initial = createFreshInitialMatch();
+      localStorage.setItem(key, JSON.stringify([initial]));
+      return [initial];
     }
     const parsed = JSON.parse(raw);
     const valid = Array.isArray(parsed)
@@ -625,38 +612,42 @@ export function getStoredMatches(): Match[] {
             m.team2
         )
       : [];
-    // Auto-migrate legacy template match if present
     const cleaned = valid.filter((m) => m.id !== 'match-ind-aus-final');
     if (cleaned.length === 0) {
-      localStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify([defaultInitialMatch]));
-      return [defaultInitialMatch];
+      const initial = createFreshInitialMatch();
+      localStorage.setItem(key, JSON.stringify([initial]));
+      return [initial];
     }
     return cleaned;
   } catch (e) {
     console.error('Failed reading matches from localStorage', e);
-    return [defaultInitialMatch];
+    const initial = createFreshInitialMatch();
+    return [initial];
   }
 }
 
-export function saveMatches(matches: Match[]): void {
+export function saveMatches(matches: Match[], userId?: string): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.MATCHES, JSON.stringify(matches));
+    const key = getUserStorageKey(STORAGE_KEYS.MATCHES, userId);
+    localStorage.setItem(key, JSON.stringify(matches));
   } catch (e) {
     console.error('Failed saving matches to localStorage', e);
   }
 }
 
-export function getStoredActiveMatchId(): string | null {
+export function getStoredActiveMatchId(userId?: string): string | null {
   try {
-    return localStorage.getItem(STORAGE_KEYS.ACTIVE_MATCH_ID);
+    const key = getUserStorageKey(STORAGE_KEYS.ACTIVE_MATCH_ID, userId);
+    return localStorage.getItem(key) || (!userId || userId === 'guest' ? localStorage.getItem(STORAGE_KEYS.ACTIVE_MATCH_ID) : null);
   } catch {
     return null;
   }
 }
 
-export function saveActiveMatchId(id: string): void {
+export function saveActiveMatchId(id: string, userId?: string): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.ACTIVE_MATCH_ID, id);
+    const key = getUserStorageKey(STORAGE_KEYS.ACTIVE_MATCH_ID, userId);
+    localStorage.setItem(key, id);
   } catch (e) {
     console.error('Failed saving activeMatchId to localStorage', e);
   }

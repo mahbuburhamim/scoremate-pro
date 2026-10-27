@@ -10,25 +10,43 @@ function liveSyncPlugin(): Plugin {
   const rootDir = typeof import.meta.dirname !== 'undefined' ? import.meta.dirname : process.cwd();
   const STORAGE_FILE = path.resolve(rootDir, '.server_matches.json');
 
-  function readCachedData(): { matches: any[] | null; activeMatchId: string | null } {
+  interface UserSyncStore {
+    matches: any[] | null;
+    activeMatchId: string | null;
+    timestamp: number;
+  }
+
+  interface ServerStorageData {
+    users: Record<string, UserSyncStore>;
+  }
+
+  function readCachedData(): ServerStorageData {
     try {
       if (fs.existsSync(STORAGE_FILE)) {
         const raw = fs.readFileSync(STORAGE_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.matches) && parsed.matches.length > 0) {
+        if (parsed && parsed.users && typeof parsed.users === 'object') {
+          return parsed as ServerStorageData;
+        }
+        if (parsed && Array.isArray(parsed.matches)) {
           return {
-            matches: parsed.matches,
-            activeMatchId: parsed.activeMatchId || parsed.matches[0]?.id || null,
+            users: {
+              default: {
+                matches: parsed.matches,
+                activeMatchId: parsed.activeMatchId || parsed.matches[0]?.id || null,
+                timestamp: Date.now(),
+              },
+            },
           };
         }
       }
     } catch (e) {
       console.error('Error reading .server_matches.json', e);
     }
-    return { matches: null, activeMatchId: null };
+    return { users: {} };
   }
 
-  function writeCachedData(data: { matches: any[] | null; activeMatchId: string | null }) {
+  function writeCachedData(data: ServerStorageData) {
     try {
       fs.writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2), 'utf-8');
     } catch (e) {
@@ -36,7 +54,7 @@ function liveSyncPlugin(): Plugin {
     }
   }
 
-  let cachedData = readCachedData();
+  let cachedData: ServerStorageData = readCachedData();
   const sseClients = new Set<ServerResponse>();
 
   // Periodic SSE ping to keep OBS Studio CEF connections alive
@@ -63,10 +81,11 @@ function liveSyncPlugin(): Plugin {
       return;
     }
 
-    const url = req.url?.split('?')[0];
+    const rawUrl = req.url || '';
+    const pathname = rawUrl.split('?')[0];
 
     // 1. SSE Real-time stream for OBS Studio (CEF) and external devices
-    if (url === '/api/events') {
+    if (pathname === '/api/events') {
       res.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
@@ -77,19 +96,6 @@ function liveSyncPlugin(): Plugin {
       res.write(': connected\n\n');
       sseClients.add(res);
 
-      const freshData = readCachedData();
-      if (freshData.matches) {
-        cachedData = freshData;
-        res.write(
-          `data: ${JSON.stringify({
-            type: 'MATCHES_SYNC',
-            matches: cachedData.matches,
-            activeMatchId: cachedData.activeMatchId,
-            timestamp: Date.now(),
-          })}\n\n`
-        );
-      }
-
       req.on('close', () => {
         sseClients.delete(res);
       });
@@ -97,7 +103,7 @@ function liveSyncPlugin(): Plugin {
     }
 
     // 2. POST update from Controller / Browser
-    if (url === '/api/match' && req.method === 'POST') {
+    if (pathname === '/api/match' && req.method === 'POST') {
       let body = '';
       req.on('data', (chunk) => {
         body += chunk;
@@ -105,22 +111,27 @@ function liveSyncPlugin(): Plugin {
       req.on('end', () => {
         try {
           const data = JSON.parse(body);
+          const targetUser = data.userId || 'default';
+          if (!cachedData.users) cachedData.users = {};
+
           if (
             data.matches &&
             Array.isArray(data.matches) &&
             data.matches.some((m: any) => m && m.team1 && m.innings)
           ) {
-            const activeId = data.activeMatchId || cachedData.activeMatchId || data.matches[0]?.id;
-            cachedData = {
+            const activeId = data.activeMatchId || data.matches[0]?.id;
+            cachedData.users[targetUser] = {
               matches: data.matches,
               activeMatchId: activeId,
+              timestamp: Date.now(),
             };
             writeCachedData(cachedData);
 
             const payload = `data: ${JSON.stringify({
               type: 'MATCHES_SYNC',
-              matches: cachedData.matches,
-              activeMatchId: cachedData.activeMatchId,
+              userId: targetUser,
+              matches: data.matches,
+              activeMatchId: activeId,
               timestamp: Date.now(),
             })}\n\n`;
             for (const client of sseClients) {
@@ -131,33 +142,42 @@ function liveSyncPlugin(): Plugin {
               }
             }
           } else if (data.activeMatchId) {
-            cachedData.activeMatchId = data.activeMatchId;
-            writeCachedData(cachedData);
-            const payload = `data: ${JSON.stringify({
-              type: 'MATCHES_SYNC',
-              matches: cachedData.matches,
-              activeMatchId: cachedData.activeMatchId,
-              timestamp: Date.now(),
-            })}\n\n`;
-            for (const client of sseClients) {
-              try {
-                client.write(payload);
-              } catch {
-                sseClients.delete(client);
+            if (cachedData.users[targetUser]) {
+              cachedData.users[targetUser].activeMatchId = data.activeMatchId;
+              cachedData.users[targetUser].timestamp = Date.now();
+              writeCachedData(cachedData);
+
+              const payload = `data: ${JSON.stringify({
+                type: 'MATCHES_SYNC',
+                userId: targetUser,
+                matches: cachedData.users[targetUser].matches,
+                activeMatchId: data.activeMatchId,
+                timestamp: Date.now(),
+              })}\n\n`;
+              for (const client of sseClients) {
+                try {
+                  client.write(payload);
+                } catch {
+                  sseClients.delete(client);
+                }
               }
             }
           } else if (data.reset) {
-            cachedData = { matches: null, activeMatchId: null };
-            try {
-              if (fs.existsSync(STORAGE_FILE)) fs.unlinkSync(STORAGE_FILE);
-            } catch {}
+            delete cachedData.users[targetUser];
+            writeCachedData(cachedData);
           }
+
           res.writeHead(200, {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-store, no-cache, must-revalidate',
             'Access-Control-Allow-Origin': '*',
           });
-          res.end(JSON.stringify({ success: true, activeMatchId: cachedData.activeMatchId }));
+          res.end(
+            JSON.stringify({
+              success: true,
+              activeMatchId: cachedData.users[targetUser]?.activeMatchId,
+            })
+          );
         } catch {
           res.writeHead(400, {
             'Content-Type': 'application/json',
@@ -170,11 +190,14 @@ function liveSyncPlugin(): Plugin {
     }
 
     // 3. GET current match state (guaranteed fresh with strict no-cache headers for OBS CEF)
-    if (url === '/api/match' && req.method === 'GET') {
+    if (pathname === '/api/match' && req.method === 'GET') {
       const freshData = readCachedData();
-      if (freshData.matches) {
-        cachedData = freshData;
-      }
+      cachedData = freshData;
+
+      const parsedUrl = new URL(rawUrl, 'http://localhost');
+      const qMatchId = parsedUrl.searchParams.get('matchId');
+      const qUserId = parsedUrl.searchParams.get('userId');
+
       res.writeHead(200, {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
@@ -182,11 +205,45 @@ function liveSyncPlugin(): Plugin {
         'Expires': '0',
         'Access-Control-Allow-Origin': '*',
       });
+
+      // 1. If matchId is requested (e.g. from OBS transparent overlay)
+      if (qMatchId) {
+        for (const uId of Object.keys(cachedData.users)) {
+          const userStore = cachedData.users[uId];
+          const found = userStore?.matches?.find((m: any) => m?.id === qMatchId);
+          if (found) {
+            res.end(
+              JSON.stringify({
+                matches: [found],
+                activeMatchId: qMatchId,
+                timestamp: userStore.timestamp || Date.now(),
+              })
+            );
+            return;
+          }
+        }
+      }
+
+      // 2. If userId is requested (from Controller or Dashboard)
+      if (qUserId && cachedData.users[qUserId]) {
+        const uStore = cachedData.users[qUserId];
+        res.end(
+          JSON.stringify({
+            matches: uStore.matches,
+            activeMatchId: uStore.activeMatchId,
+            timestamp: uStore.timestamp || Date.now(),
+          })
+        );
+        return;
+      }
+
+      // 3. Fallback: default user or first user
+      const defaultUser = cachedData.users['default'] || Object.values(cachedData.users)[0];
       res.end(
         JSON.stringify({
-          matches: cachedData.matches,
-          activeMatchId: cachedData.activeMatchId,
-          timestamp: Date.now(),
+          matches: defaultUser?.matches || null,
+          activeMatchId: defaultUser?.activeMatchId || null,
+          timestamp: defaultUser?.timestamp || Date.now(),
         })
       );
       return;
