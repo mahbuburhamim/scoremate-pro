@@ -9,6 +9,7 @@ import {
   AnimationTrigger,
   Team,
   FallOfWicket,
+  Inning,
 } from '../types/cricket';
 import {
   BROADCAST_CHANNEL_NAME,
@@ -69,6 +70,7 @@ interface CricketContextType {
     team1LogoUrl?: string;
     team2LogoUrl?: string;
   }) => Match;
+  deleteMatch: (matchId: string) => string;
   manualSyncPulse: () => void;
   isSyncing: boolean;
   applySyncMatches: (matches: Match[], activeId?: string) => void;
@@ -99,8 +101,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         !m.team1?.name?.toUpperCase().includes('IND') &&
         !m.team2?.name?.toUpperCase().includes('AUS')
     );
-    if (!filtered.some((m) => m.id === defaultInitialMatch.id)) {
-      filtered.unshift(defaultInitialMatch);
+    if (filtered.length === 0) {
+      filtered = [defaultInitialMatch];
     }
     return filtered;
   }, []);
@@ -1081,6 +1083,88 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [matches, syncMatchState]
   );
 
+  // Delete match permanently and switch to remaining match or fresh template
+  const deleteMatch = useCallback(
+    (matchIdToDelete: string): string => {
+      const remaining = matches.filter((m) => m.id !== matchIdToDelete);
+
+      let finalMatches: Match[];
+      let nextActiveId: string;
+
+      if (remaining.length > 0) {
+        finalMatches = remaining;
+        nextActiveId = remaining[0].id;
+      } else {
+        // If all matches were deleted, create a fresh clean match
+        const freshCleanMatch: Match = {
+          ...defaultInitialMatch,
+          id: `match-${Date.now()}`,
+          matchNo: 'MATCH 1 • LIVE',
+          status: 'live',
+          updatedAt: Date.now(),
+          innings: defaultInitialMatch.innings.map((inn) => ({
+            ...inn,
+            totalRuns: 0,
+            wickets: 0,
+            legalBalls: 0,
+            oversDisplay: '0.0',
+            extras: { wides: 0, noBalls: 0, byes: 0, legByes: 0, total: 0 },
+            currentOverBalls: [],
+            allBalls: [],
+            fow: [],
+            isCompleted: false,
+          })) as unknown as [Inning, Inning],
+        };
+        finalMatches = [freshCleanMatch];
+        nextActiveId = freshCleanMatch.id;
+      }
+
+      setMatches(finalMatches);
+      saveMatches(finalMatches);
+      setActiveMatchIdState(nextActiveId);
+      saveActiveMatchId(nextActiveId);
+      activeMatchIdRef.current = nextActiveId;
+
+      // Broadcast updated matches to OBS and all clients
+      const syncPayload = JSON.stringify({
+        type: 'MATCHES_SYNC',
+        matches: finalMatches,
+        activeMatchId: nextActiveId,
+        timestamp: Date.now(),
+      });
+
+      if (channelRef.current) {
+        try {
+          channelRef.current.postMessage({
+            type: 'MATCHES_SYNC',
+            matches: finalMatches,
+            activeMatchId: nextActiveId,
+            timestamp: Date.now(),
+          });
+        } catch {}
+      }
+
+      try {
+        fetch('/api/match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: syncPayload,
+        }).catch(() => {});
+      } catch {}
+
+      try {
+        fetch('https://ntfy.sh/scoremate_live_sync_v1', {
+          method: 'POST',
+          headers: { 'Title': 'MATCH_DELETED' },
+          body: syncPayload,
+        }).catch(() => {});
+      } catch {}
+
+      return nextActiveId;
+    },
+    [matches]
+  );
+
   const manualSyncPulse = useCallback(() => {
     setIsSyncing(true);
     setTimeout(() => setIsSyncing(false), 800);
@@ -1132,6 +1216,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatePlayer,
         createTournament,
         createMatch,
+        deleteMatch,
         manualSyncPulse,
         isSyncing,
         applySyncMatches,

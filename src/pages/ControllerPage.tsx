@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Play,
   HelpCircle,
@@ -28,6 +28,7 @@ import { ImageCropperModal } from '../components/ImageCropperModal';
 
 export const ControllerPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     matches,
@@ -49,6 +50,8 @@ export const ControllerPage: React.FC = () => {
     updateTeamDetails,
     addPlayersToTeam,
     updatePlayer,
+    createMatch,
+    deleteMatch,
     manualSyncPulse,
     isSyncing,
   } = useCricket();
@@ -87,6 +90,45 @@ export const ControllerPage: React.FC = () => {
   const [team1LogoDraft, setTeam1LogoDraft] = useState<string>('');
   const [team2LogoDraft, setTeam2LogoDraft] = useState<string>('');
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Match deletion & creation modals state
+  const [showDeleteMatchModal, setShowDeleteMatchModal] = useState(false);
+  const [showCreateNewMatchModal, setShowCreateNewMatchModal] = useState(false);
+  const [newTeam1Name, setNewTeam1Name] = useState('BANGLADESH');
+  const [newTeam2Name, setNewTeam2Name] = useState('ENGLAND');
+  const [newOvers, setNewOvers] = useState(20);
+  const [newMatchNo, setNewMatchNo] = useState('MATCH 1 • LIVE');
+  const [newTossWonBy, setNewTossWonBy] = useState<'team1' | 'team2'>('team1');
+  const [newOptedTo, setNewOptedTo] = useState<'bat' | 'bowl'>('bat');
+
+  const handleConfirmDeleteMatch = () => {
+    setShowDeleteMatchModal(false);
+    const matchToDeleteId = activeMatch.id;
+    const remaining = matches.filter((m) => m.id !== matchToDeleteId);
+    const nextId = deleteMatch(matchToDeleteId);
+    if (remaining.length > 0) {
+      navigate(`/controller/${nextId}`);
+    } else {
+      navigate(`/controller/${nextId}`);
+      setShowCreateNewMatchModal(true);
+    }
+  };
+
+  const handleCreateNewMatch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeam1Name.trim() || !newTeam2Name.trim()) return;
+    const created = createMatch({
+      tournamentId: activeMatch.tournamentId || 'tour-t20-wc',
+      team1Name: newTeam1Name.trim(),
+      team2Name: newTeam2Name.trim(),
+      overs: Number(newOvers) || 20,
+      matchNo: newMatchNo.trim() || 'MATCH 1 • LIVE',
+      tossWonBy: newTossWonBy,
+      optedTo: newOptedTo,
+    });
+    setShowCreateNewMatchModal(false);
+    navigate(`/controller/${created.id}`);
+  };
 
   // Manual team logo file upload with canvas compression
   const handleLogoFileUpload = (file: File, isTeam1: boolean) => {
@@ -996,6 +1038,50 @@ export const ControllerPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* =========================================================
+            MATCH MANAGEMENT & DANGER ZONE ("Delete this match")
+        ========================================================= */}
+        <div className="w-full rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-red-950/40 border border-slate-800 p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 w-full sm:w-auto">
+            <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-heading font-black text-sm text-white tracking-wide">
+                  Match Management
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-mono">
+                  {activeMatch.matchNo}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Current: <span className="text-cyan-400 font-bold">{activeMatch.team1.name} vs {activeMatch.team2.name}</span> • Delete or start a new match
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
+            {/* Create New Match Button */}
+            <button
+              onClick={() => setShowCreateNewMatchModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md transition transform active:scale-95"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create New Match</span>
+            </button>
+
+            {/* Delete This Match Button */}
+            <button
+              onClick={() => setShowDeleteMatchModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 hover:border-red-500 text-red-400 hover:text-red-300 font-bold text-xs uppercase tracking-wider shadow-md transition transform active:scale-95"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete this match</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* =========================================================
@@ -1604,6 +1690,197 @@ export const ControllerPage: React.FC = () => {
                 Save Player
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          DELETE MATCH CONFIRMATION MODAL (Yes / No Option)
+      ========================================================= */}
+      {showDeleteMatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-red-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-black text-lg text-white">Delete This Match?</h3>
+                  <p className="text-[11px] text-red-400 font-medium">এই ম্যাচটি মুছে ফেলতে চান?</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeleteMatchModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Match Preview */}
+            <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-bold text-slate-300">{activeMatch.matchNo}</span>
+                <span className="font-mono text-cyan-400">{activeMatch.overs} Overs Match</span>
+              </div>
+              <div className="text-base font-black text-white flex items-center gap-2">
+                <span className="text-cyan-300">{activeMatch.team1.name}</span>
+                <span className="text-red-400 text-xs font-normal">VS</span>
+                <span className="text-amber-300">{activeMatch.team2.name}</span>
+              </div>
+              <div className="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-900 font-mono">
+                <span>Current Score:</span>
+                <span className="font-bold text-emerald-400">
+                  {activeInning.totalRuns}/{activeInning.wickets} ({activeInning.oversDisplay} ov)
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Are you sure you want to permanently delete this match? It will be removed from your Controller and OBS Broadcast Overlay. You can then immediately start a new match.
+            </p>
+
+            {/* YES / NO Confirmation Buttons */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                onClick={() => setShowDeleteMatchModal(false)}
+                className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs uppercase tracking-wider transition border border-slate-700"
+              >
+                No, Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteMatch}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/50 transition transform active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Yes, Delete Match</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          CREATE NEW MATCH MODAL
+      ========================================================= */}
+      {showCreateNewMatchModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-cyan-500/40 rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-black text-lg text-white">Create New Match</h3>
+                  <p className="text-[11px] text-cyan-400 font-medium">নতুন ক্রিকেট ম্যাচ শুরু করুন</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateNewMatchModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewMatch} className="flex flex-col gap-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Team 1 Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTeam1Name}
+                    onChange={(e) => setNewTeam1Name(e.target.value)}
+                    placeholder="e.g. BANGLADESH"
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 text-white font-bold uppercase tracking-wider focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Team 2 Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTeam2Name}
+                    onChange={(e) => setNewTeam2Name(e.target.value)}
+                    placeholder="e.g. ENGLAND"
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 text-white font-bold uppercase tracking-wider focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Match Title / Info</label>
+                  <input
+                    type="text"
+                    value={newMatchNo}
+                    onChange={(e) => setNewMatchNo(e.target.value)}
+                    placeholder="e.g. MATCH 1 • LIVE"
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 text-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Overs Per Inning</label>
+                  <select
+                    value={newOvers}
+                    onChange={(e) => setNewOvers(Number(e.target.value))}
+                    className="w-full bg-slate-800 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 text-white font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value={5}>5 Overs</option>
+                    <option value={10}>10 Overs (T10)</option>
+                    <option value={12}>12 Overs</option>
+                    <option value={15}>15 Overs</option>
+                    <option value={20}>20 Overs (T20)</option>
+                    <option value={50}>50 Overs (ODI)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Toss Won By</label>
+                  <select
+                    value={newTossWonBy}
+                    onChange={(e) => setNewTossWonBy(e.target.value as any)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="team1">{newTeam1Name || 'Team 1'}</option>
+                    <option value="team2">{newTeam2Name || 'Team 2'}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Elected To</label>
+                  <select
+                    value={newOptedTo}
+                    onChange={(e) => setNewOptedTo(e.target.value as any)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="bat">Bat First</option>
+                    <option value="bowl">Bowl First</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateNewMatchModal(false)}
+                  className="px-4 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800 text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/20 transition transform active:scale-95 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Start New Match</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
