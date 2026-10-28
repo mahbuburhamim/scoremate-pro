@@ -21,6 +21,7 @@ import {
   createFreshInitialMatch,
   getStoredActiveMatchId,
   saveActiveMatchId,
+  isStaleMockMatch,
 } from '../utils/storage';
 import { useAuth } from './AuthContext';
 
@@ -103,8 +104,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const sanitizeMatches = useCallback((list: any[]): Match[] => {
     if (!Array.isArray(list)) return [createFreshInitialMatch()];
-    let filtered = list.filter(isValidMatch);
-    filtered = filtered.filter((m) => m.id !== 'match-ind-aus-final');
+    let filtered = list.filter(isValidMatch).filter((m) => !isStaleMockMatch(m));
     if (filtered.length === 0) {
       filtered = [createFreshInitialMatch()];
     }
@@ -114,13 +114,13 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [tournaments, setTournaments] = useState<Tournament[]>(() => getStoredTournaments(currentUserId));
   const [matches, setMatches] = useState<Match[]>(() => {
     const stored = getStoredMatches(currentUserId);
-    const sanitized = stored.filter((m) => m.id !== 'match-ind-aus-final');
+    const sanitized = stored.filter((m) => !isStaleMockMatch(m));
     return sanitized.length > 0 ? sanitized : [createFreshInitialMatch()];
   });
   const [activeMatchId, setActiveMatchIdState] = useState<string>(() => {
     const storedId = getStoredActiveMatchId(currentUserId);
     const list = getStoredMatches(currentUserId);
-    const sanitized = list.filter((m) => m.id !== 'match-ind-aus-final');
+    const sanitized = list.filter((m) => !isStaleMockMatch(m));
     if (storedId && sanitized.some((m) => m.id === storedId)) {
       return storedId;
     }
@@ -207,23 +207,16 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         timestamp: Date.now(),
       });
 
-      // 2. Local Vite Server for OBS Studio (CEF)
+      // 2. Server API for OBS Studio (CEF) - works on both Vite (/api/match) and Hostinger Apache (/api/sync.php)
       try {
         fetch('/api/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: syncPayload,
         }).catch(() => {});
-      } catch {}
-
-      // 3. Cloud Real-Time Relay (ntfy.sh) - scoped by user ID
-      try {
-        fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1`, {
+        fetch('/api/sync.php', {
           method: 'POST',
-          headers: {
-            'Title': 'MATCHES_SYNC',
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: syncPayload,
         }).catch(() => {});
       } catch {}
@@ -259,23 +252,16 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         timestamp: Date.now(),
       });
 
-      // Local server
+      // Server API
       try {
         fetch('/api/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: changePayload,
         }).catch(() => {});
-      } catch {}
-
-      // Cloud relay
-      try {
-        fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1`, {
+        fetch('/api/sync.php', {
           method: 'POST',
-          headers: {
-            'Title': 'ACTIVE_MATCH_CHANGE',
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: changePayload,
         }).catch(() => {});
       } catch {}
@@ -395,7 +381,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       console.warn('Cloud SSE not available', e);
     }
 
-    // 4. Ultra-reliable polling fallback (checks local /api/match first, falls back to cloud)
+    // 4. Ultra-reliable polling fallback (checks /api/match first, falls back to /api/sync.php)
     const pollInterval = setInterval(() => {
       fetch(`/api/match?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => {
@@ -404,39 +390,23 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         })
         .then((data) => {
           if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-            if (!data.userId || data.userId === uid) {
+            if (!data.userId || data.userId === uid || uid === 'guest') {
               applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
             }
           }
         })
         .catch(() => {
-          // If local server is not running (e.g. production static site), poll cloud sync relay with short timeout
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 1200);
-          fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1/json?poll=1&since=1m`, {
-            signal: controller.signal,
-          })
-            .then((r) => r.text())
-            .then((text) => {
-              clearTimeout(timer);
-              const lines = text.trim().split('\n');
-              for (const line of lines) {
-                try {
-                  const data = JSON.parse(line);
-                  if (data?.message) {
-                    const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
-                    if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-                      if (!payload.userId || payload.userId === uid) {
-                        applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
-                      }
-                    }
-                  }
-                } catch {}
+          // Fallback to /api/sync.php (Hostinger Apache)
+          fetch(`/api/sync.php?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
+                if (!data.userId || data.userId === uid || uid === 'guest') {
+                  applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
+                }
               }
             })
-            .catch(() => {
-              clearTimeout(timer);
-            });
+            .catch(() => {});
         });
     }, 250);
 

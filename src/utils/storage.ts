@@ -581,21 +581,30 @@ export function saveTournaments(tournaments: Tournament[], userId?: string): voi
   }
 }
 
+export function isStaleMockMatch(m: any): boolean {
+  if (!m || typeof m !== 'object') return true;
+  if (m.id === 'match-ind-aus-final' || m.id === 'demo-ban-eng') return true;
+  // Detect stale mock data from prior versions (176 runs / 17.2 overs)
+  if (m.innings?.[0]?.totalRuns === 176 && (m.innings?.[0]?.oversDisplay === '17.2' || m.innings?.[0]?.legalBalls === 104)) {
+    return true;
+  }
+  return false;
+}
+
 export function getStoredMatches(userId?: string): Match[] {
   try {
     const key = getUserStorageKey(STORAGE_KEYS.MATCHES, userId);
+    
+    // Clean up any stale legacy un-scoped storage key
+    try {
+      const legacyRaw = localStorage.getItem(STORAGE_KEYS.MATCHES);
+      if (legacyRaw && (legacyRaw.includes('176') || legacyRaw.includes('demo-ban-eng'))) {
+        localStorage.removeItem(STORAGE_KEYS.MATCHES);
+      }
+    } catch {}
+
     const raw = localStorage.getItem(key);
     if (!raw) {
-      if (!userId || userId === 'guest') {
-        const legacy = localStorage.getItem(STORAGE_KEYS.MATCHES);
-        if (legacy) {
-          const parsedLegacy = JSON.parse(legacy);
-          if (Array.isArray(parsedLegacy) && parsedLegacy.length > 0) {
-            const valid = parsedLegacy.filter((m) => m && m.team1 && m.innings);
-            if (valid.length > 0) return valid;
-          }
-        }
-      }
       const initial = createFreshInitialMatch();
       localStorage.setItem(key, JSON.stringify([initial]));
       return [initial];
@@ -609,16 +618,17 @@ export function getStoredMatches(userId?: string): Match[] {
             Array.isArray(m.innings) &&
             m.innings.length > 0 &&
             m.team1 &&
-            m.team2
+            m.team2 &&
+            !isStaleMockMatch(m)
         )
       : [];
-    const cleaned = valid.filter((m) => m.id !== 'match-ind-aus-final');
-    if (cleaned.length === 0) {
+
+    if (valid.length === 0) {
       const initial = createFreshInitialMatch();
       localStorage.setItem(key, JSON.stringify([initial]));
       return [initial];
     }
-    return cleaned;
+    return valid;
   } catch (e) {
     console.error('Failed reading matches from localStorage', e);
     const initial = createFreshInitialMatch();

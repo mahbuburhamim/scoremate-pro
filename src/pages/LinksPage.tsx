@@ -201,6 +201,23 @@ export const LinksPage: React.FC = () => {
           </div>
         </div>
 
+        {/* OBS Setup & Real-time Live Sync Guide */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-md">
+              <Tv className="w-5 h-5" />
+            </div>
+            <div className="text-xs">
+              <span className="font-heading font-black block text-sm text-blue-950">
+                OBS Studio লাইভ স্কোরবোর্ড ব্যবহারের নিয়ম
+              </span>
+              <span className="text-slate-600 leading-relaxed block mt-0.5">
+                OBS-এ নতুন <strong>Browser Source</strong> বানিয়ে <strong>Copy</strong> করা লিঙ্কটি পেস্ট করুন (Width: 1920, Height: 1080)। যদি OBS-এ আগের কোনো ক্যাশ স্কোরবোর্ড আটকে থাকে, তবে Browser Source-এর Properties-এ গিয়ে <strong>&quot;Refresh cache of current page&quot;</strong> বাটনে চাপ দিন।
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Guest Preview Notice if not subscribed */}
         {!hasActiveSubscription && (
           <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">

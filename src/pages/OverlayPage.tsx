@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useCricket } from '../context/CricketContext';
 import { OverlayTheme } from '../types/cricket';
+import { isStaleMockMatch, createFreshInitialMatch } from '../utils/storage';
 import { CricPicTheme } from '../components/overlay/CricPicTheme';
 import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
@@ -32,16 +33,18 @@ export const OverlayPage: React.FC = () => {
 
   // Resolve match from payload and update direct state and context
   const resolveAndSet = React.useCallback(
-    (list: any[], activeId?: string) => {
-      if (!Array.isArray(list) || list.length === 0) return;
-      let target: any = null;
-      if (matchId && matchId !== 'active') {
-        target = list.find((m) => m.id === matchId);
-      } else {
-        const idToUse = activeId || list[0]?.id;
-        target = list.find((m) => m.id === idToUse) || list[0];
+    (list: any[], activeId?: string, singleTarget?: any) => {
+      let target: any = singleTarget && !isStaleMockMatch(singleTarget) ? singleTarget : null;
+      if (!target && Array.isArray(list) && list.length > 0) {
+        const cleanList = list.filter((m) => !isStaleMockMatch(m));
+        if (matchId && matchId !== 'active') {
+          target = cleanList.find((m) => m.id === matchId);
+        } else {
+          const idToUse = activeId || cleanList[0]?.id;
+          target = cleanList.find((m) => m.id === idToUse) || cleanList[0];
+        }
       }
-      if (target) {
+      if (target && !isStaleMockMatch(target)) {
         setDirectMatch((prev: any) => {
           if (!prev || JSON.stringify(prev) !== JSON.stringify(target)) {
             return target;
@@ -51,7 +54,7 @@ export const OverlayPage: React.FC = () => {
         setSyncStatus('connected');
       }
       // Keep entire CricketContext updated
-      if (applySyncMatches) {
+      if (applySyncMatches && Array.isArray(list) && list.length > 0) {
         applySyncMatches(list, activeId);
       }
     },
@@ -59,7 +62,7 @@ export const OverlayPage: React.FC = () => {
   );
 
   useEffect(() => {
-    // 1. Initial resolution from matches context
+    // 1. Initial resolution from matches context if clean
     if (matches && matches.length > 0) {
       resolveAndSet(matches);
     }
@@ -79,62 +82,32 @@ export const OverlayPage: React.FC = () => {
       localSse.onopen = () => setSyncStatus('connected');
     } catch {}
 
-    // 3. Direct Cloud SSE (ntfy.sh) - works across remote devices, live deployments & OBS
-    let cloudSse: EventSource | null = null;
-    try {
-      cloudSse = new EventSource('https://ntfy.sh/scoremate_live_sync_v1/sse');
-      cloudSse.onmessage = (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
-          if (payload?.matches && Array.isArray(payload.matches)) {
-            resolveAndSet(payload.matches, payload.activeMatchId);
-          }
-        } catch {}
-      };
-    } catch {}
-
-    // 4. Fast polling fallback (checks local /api/match first with cache-buster)
+    // 3. Fast polling: checks /api/match first, falls back directly to Hostinger's /api/sync.php
     const pollTimer = setInterval(() => {
       fetch(`/api/match?matchId=${matchId || ''}&_t=${Date.now()}`, { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
-          if (data?.matches && Array.isArray(data.matches)) {
-            resolveAndSet(data.matches, data.activeMatchId);
+          if (data?.targetMatch || (data?.matches && Array.isArray(data.matches))) {
+            resolveAndSet(data.matches || [], data.activeMatchId, data.targetMatch);
+          } else {
+            throw new Error('Try sync.php fallback');
           }
         })
         .catch(() => {
-          // Cloud fallback with 1.2s timeout so sockets are never blocked
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 1200);
-          fetch('https://ntfy.sh/scoremate_live_sync_v1/json?poll=1&since=1m', {
-            signal: controller.signal,
-          })
-            .then((r) => r.text())
-            .then((text) => {
-              clearTimeout(timer);
-              const lines = text.trim().split('\n');
-              for (const line of lines) {
-                try {
-                  const data = JSON.parse(line);
-                  if (data?.message) {
-                    const payload = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
-                    if (payload?.matches && Array.isArray(payload.matches)) {
-                      resolveAndSet(payload.matches, payload.activeMatchId);
-                    }
-                  }
-                } catch {}
+          // Direct fallback to Hostinger Apache PHP handler
+          fetch(`/api/sync.php?matchId=${matchId || ''}&_t=${Date.now()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (data?.targetMatch || (data?.matches && Array.isArray(data.matches))) {
+                resolveAndSet(data.matches || [], data.activeMatchId, data.targetMatch);
               }
             })
-            .catch(() => {
-              clearTimeout(timer);
-            });
+            .catch(() => {});
         });
     }, 250);
 
     return () => {
       localSse?.close();
-      cloudSse?.close();
       clearInterval(pollTimer);
     };
   }, [matchId, resolveAndSet]);
@@ -145,7 +118,7 @@ export const OverlayPage: React.FC = () => {
     : activeMatch;
 
   const match = (() => {
-    if (directMatch) {
+    if (directMatch && !isStaleMockMatch(directMatch)) {
       if (!matchId || matchId === 'active' || directMatch.id === matchId) {
         const directTime = directMatch.updatedAt || 0;
         const contextTime = contextMatch?.updatedAt || 0;
@@ -154,7 +127,16 @@ export const OverlayPage: React.FC = () => {
         }
       }
     }
-    return contextMatch || directMatch || activeMatch;
+    if (contextMatch && !isStaleMockMatch(contextMatch)) {
+      return contextMatch;
+    }
+    if (directMatch && !isStaleMockMatch(directMatch)) {
+      return directMatch;
+    }
+    if (activeMatch && !isStaleMockMatch(activeMatch)) {
+      return activeMatch;
+    }
+    return createFreshInitialMatch();
   })();
 
   // Set body background to transparent if transparentParam is true
