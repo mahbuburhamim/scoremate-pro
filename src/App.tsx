@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CricketProvider } from './context/CricketContext';
+import { FootballProvider } from './context/FootballContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { AuthModal } from './components/AuthModal';
@@ -14,6 +15,8 @@ import { TournamentPage } from './pages/TournamentPage';
 import { LinksPage } from './pages/LinksPage';
 import { ControllerPage } from './pages/ControllerPage';
 import { OverlayPage } from './pages/OverlayPage';
+import { FootballOverlayPage } from './pages/FootballOverlayPage';
+import { FootballControllerPage } from './pages/FootballControllerPage';
 
 const RootHomeRoute: React.FC = () => {
   const { hasActiveSubscription } = useAuth();
@@ -49,6 +52,10 @@ const AppLayout: React.FC = () => {
           {/* Contact Support */}
           <Route path="/contact" element={<ContactPage />} />
 
+          {/* Football Match Scoreboard & Live Controller */}
+          <Route path="/football" element={<FootballControllerPage />} />
+          <Route path="/football/controller" element={<FootballControllerPage />} />
+
           {/* Protected Member Dashboard */}
           <Route
             path="/dashboard"
@@ -82,7 +89,10 @@ const AppLayout: React.FC = () => {
           {/* Public Scoreboard Links (Anyone can preview, but Copy Link requires subscription) */}
           <Route path="/links" element={<LinksPage />} />
 
-          {/* Public OBS Transparent Broadcast Overlay (Never blocked for OBS Browser Source) */}
+          {/* Public OBS Transparent Football Scoreboard (1920x1080 Top-Left) */}
+          <Route path="/overlay/football" element={<FootballOverlayPage />} />
+
+          {/* Public OBS Transparent Cricket Broadcast Overlay */}
           <Route path="/overlay/:matchId" element={<OverlayPage />} />
 
           {/* Fallback */}
@@ -97,9 +107,11 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <CricketProvider>
-        <BrowserRouter>
-          <AppLayout />
-        </BrowserRouter>
+        <FootballProvider>
+          <BrowserRouter>
+            <AppLayout />
+          </BrowserRouter>
+        </FootballProvider>
       </CricketProvider>
     </AuthProvider>
   );

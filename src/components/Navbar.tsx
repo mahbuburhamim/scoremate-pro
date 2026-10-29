@@ -112,6 +112,23 @@ export const Navbar: React.FC = () => {
             Scoreboard Links
           </NavLink>
 
+          {/* Football Scoreboard (Esports Top-Left 1920x1080) */}
+          <NavLink
+            to="/football"
+            className={({ isActive }) =>
+              `flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition font-bold text-xs ${
+                isActive
+                  ? 'border-cyan-500 bg-cyan-50 text-cyan-800 shadow-sm'
+                  : 'border-slate-300 text-slate-700 hover:border-cyan-400 hover:text-cyan-700 hover:bg-slate-50'
+              }`
+            }
+          >
+            <span>⚽ Football</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-cyan-600 text-white tracking-wider">
+              NEW
+            </span>
+          </NavLink>
+
           {/* Controller link if subscribed */}
           {hasActiveSubscription && (
             <NavLink
@@ -259,6 +276,24 @@ export const Navbar: React.FC = () => {
               }
             >
               Scoreboard Links
+            </NavLink>
+
+            <NavLink
+              to="/football"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `p-3 rounded-xl transition flex items-center justify-between ${
+                  isActive ? 'bg-cyan-50 text-cyan-800 font-bold' : 'hover:bg-slate-50'
+                }`
+              }
+            >
+              <span className="flex items-center gap-2">
+                <span>⚽</span>
+                <span>Football Scoreboard (Top-Left)</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-cyan-600 text-white">
+                1080p
+              </span>
             </NavLink>
 
             <NavLink

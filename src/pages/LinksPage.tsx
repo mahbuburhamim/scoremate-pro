@@ -151,6 +151,54 @@ export const LinksPage: React.FC = () => {
           </div>
         </div>
 
+        {/* NEW FOOTBALL SCOREBOARD SPOTLIGHT BANNER */}
+        <div className="w-full bg-gradient-to-r from-slate-950 via-blue-950 to-slate-950 border-2 border-cyan-500/50 rounded-3xl p-5 sm:p-6 shadow-2xl text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative z-10">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-black text-[10px] tracking-wider uppercase">
+                  NEW RELEASE
+                </span>
+                <span className="text-cyan-300 font-mono text-xs font-bold">1920x1080 Full HD Top-Left Stationed</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                <span>⚽ Football Match Scoreboard (Esports Neon Graphic)</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                Futuristic 3D beveled graphics with live match clock, dual team scores, goal celebration banners, red/yellow card trackers, and transparent background for OBS Studio.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <button
+                onClick={() => handleCopy(`${window.location.origin}/overlay/football`, 'football_overlay')}
+                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 transition active:scale-95"
+              >
+                {copiedKey === 'football_overlay' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>{copiedKey === 'football_overlay' ? 'Copied 1080p URL!' : 'Copy 1920x1080 OBS Link'}</span>
+              </button>
+
+              <Link
+                to="/football"
+                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition shadow-lg"
+              >
+                <span>Live Controller</span>
+              </Link>
+
+              <a
+                href="/overlay/football"
+                target="_blank"
+                rel="noreferrer"
+                className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                title="Preview in new tab"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Live Mini Preview Canvas (Using ResponsiveScoreboardWrapper - Zero Cutoff) */}
         <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-3 sm:p-5 shadow-[0_15px_35px_rgba(2,132,199,0.06)] flex flex-col gap-3 sm:gap-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
