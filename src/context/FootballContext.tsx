@@ -4,11 +4,26 @@ import {
   FootballPeriod,
   FootballScoreboardConfig,
   FootballAnimation,
+  PenaltyKickResult,
+  PenaltyShootoutState,
 } from '../types/football';
 import { playGoalSound, playWhistleSound } from '../utils/soundEffects';
 
 const STORAGE_KEY = 'footscore_active_match';
 const SYNC_CHANNEL_NAME = 'footscore_live_sync';
+
+export const DEFAULT_PENALTIES: PenaltyShootoutState = {
+  isActive: false,
+  team1Kicks: ['pending', 'pending', 'pending', 'pending', 'pending'],
+  team2Kicks: ['pending', 'pending', 'pending', 'pending', 'pending'],
+  team1Score: 0,
+  team2Score: 0,
+  currentTurn: {
+    team: 1,
+    kickIndex: 0,
+  },
+  winner: null,
+};
 
 export const DEFAULT_FOOTBALL_MATCH: FootballMatch = {
   id: 'football-live-1',
@@ -43,6 +58,7 @@ export const DEFAULT_FOOTBALL_MATCH: FootballMatch = {
   },
   goals: [],
   activeAnimation: null,
+  penalties: DEFAULT_PENALTIES,
   config: {
     position: 'top-left',
     offsetX: 50,
@@ -178,6 +194,12 @@ interface FootballContextType {
   // Presets & Reset
   loadPreset: (key: string) => void;
   resetMatch: () => void;
+  // Penalty Shootout
+  togglePenalties: (active?: boolean) => void;
+  recordPenaltyKick: (team: 1 | 2, kickIndex: number, result: PenaltyKickResult) => void;
+  quickRecordNextPenalty: (team: 1 | 2, result: 'goal' | 'miss') => void;
+  addSuddenDeathKick: () => void;
+  resetPenalties: () => void;
 }
 
 const FootballContext = createContext<FootballContextType | undefined>(undefined);
@@ -620,6 +642,187 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [setMatch]);
 
+  // Penalty Shootout Actions
+  const togglePenalties = useCallback(
+    (active?: boolean) => {
+      setMatch((prev) => {
+        const nextActive = active !== undefined ? active : !prev.penalties?.isActive;
+        return {
+          ...prev,
+          time: {
+            ...prev.time,
+            period: nextActive ? 'PEN' : prev.time.period,
+            isRunning: false,
+          },
+          penalties: {
+            ...(prev.penalties || DEFAULT_PENALTIES),
+            isActive: nextActive,
+          },
+        };
+      });
+    },
+    [setMatch]
+  );
+
+  const calculatePenaltyWinner = (t1Kicks: PenaltyKickResult[], t2Kicks: PenaltyKickResult[]) => {
+    const t1Goals = t1Kicks.filter((k) => k === 'goal').length;
+    const t2Goals = t2Kicks.filter((k) => k === 'goal').length;
+    const t1Taken = t1Kicks.filter((k) => k !== 'pending').length;
+    const t2Taken = t2Kicks.filter((k) => k !== 'pending').length;
+
+    if (t1Kicks.length <= 5) {
+      const t1Remaining = 5 - t1Taken;
+      const t2Remaining = 5 - t2Taken;
+
+      if (t1Goals > t2Goals + t2Remaining) return 1;
+      if (t2Goals > t1Goals + t1Remaining) return 2;
+
+      if (t1Taken >= 5 && t2Taken >= 5) {
+        if (t1Goals > t2Goals) return 1;
+        if (t2Goals > t1Goals) return 2;
+        return null;
+      }
+    } else {
+      if (t1Taken === t2Taken && t1Taken > 5) {
+        if (t1Goals > t2Goals) return 1;
+        if (t2Goals > t1Goals) return 2;
+      }
+    }
+    return null;
+  };
+
+  const recordPenaltyKick = useCallback(
+    (team: 1 | 2, kickIndex: number, result: PenaltyKickResult) => {
+      setMatch((prev) => {
+        const pen = prev.penalties || DEFAULT_PENALTIES;
+        const kicksKey = team === 1 ? 'team1Kicks' : 'team2Kicks';
+        const updatedKicks = [...pen[kicksKey]];
+
+        while (updatedKicks.length <= kickIndex) {
+          updatedKicks.push('pending');
+        }
+        updatedKicks[kickIndex] = result;
+
+        const otherKicks = team === 1 ? pen.team2Kicks : pen.team1Kicks;
+        const t1K = team === 1 ? updatedKicks : otherKicks;
+        const t2K = team === 2 ? updatedKicks : otherKicks;
+
+        const t1Score = t1K.filter((k) => k === 'goal').length;
+        const t2Score = t2K.filter((k) => k === 'goal').length;
+        const winner = calculatePenaltyWinner(t1K, t2K);
+
+        if (prev.config.soundEnabled) {
+          if (result === 'goal') playGoalSound();
+          else if (result === 'miss') playWhistleSound();
+        }
+
+        return {
+          ...prev,
+          penalties: {
+            ...pen,
+            isActive: true,
+            [kicksKey]: updatedKicks,
+            team1Score: t1Score,
+            team2Score: t2Score,
+            winner,
+          },
+          activeAnimation:
+            result === 'goal'
+              ? {
+                  type: 'GOAL',
+                  team,
+                  teamName: `${team === 1 ? prev.team1.name : prev.team2.name} PENALTY!`,
+                  playerName: `Kick #${kickIndex + 1} SCORED!`,
+                  timestamp: Date.now(),
+                }
+              : prev.activeAnimation,
+        };
+      });
+    },
+    [setMatch]
+  );
+
+  const quickRecordNextPenalty = useCallback(
+    (team: 1 | 2, result: 'goal' | 'miss') => {
+      setMatch((prev) => {
+        const pen = prev.penalties || DEFAULT_PENALTIES;
+        const kicksKey = team === 1 ? 'team1Kicks' : 'team2Kicks';
+        const currentKicks = pen[kicksKey];
+        const nextIndex = currentKicks.findIndex((k) => k === 'pending');
+        const targetIndex = nextIndex !== -1 ? nextIndex : currentKicks.length;
+
+        const updatedKicks = [...currentKicks];
+        while (updatedKicks.length <= targetIndex) {
+          updatedKicks.push('pending');
+        }
+        updatedKicks[targetIndex] = result;
+
+        const otherKey = team === 1 ? 'team2Kicks' : 'team1Kicks';
+        const otherKicks = [...pen[otherKey]];
+        while (otherKicks.length < updatedKicks.length) {
+          otherKicks.push('pending');
+        }
+
+        const t1K = team === 1 ? updatedKicks : otherKicks;
+        const t2K = team === 2 ? updatedKicks : otherKicks;
+        const t1Score = t1K.filter((k) => k === 'goal').length;
+        const t2Score = t2K.filter((k) => k === 'goal').length;
+        const winner = calculatePenaltyWinner(t1K, t2K);
+
+        if (prev.config.soundEnabled) {
+          if (result === 'goal') playGoalSound();
+          else if (result === 'miss') playWhistleSound();
+        }
+
+        return {
+          ...prev,
+          penalties: {
+            ...pen,
+            isActive: true,
+            team1Kicks: t1K,
+            team2Kicks: t2K,
+            team1Score: t1Score,
+            team2Score: t2Score,
+            winner,
+          },
+          activeAnimation:
+            result === 'goal'
+              ? {
+                  type: 'GOAL',
+                  team,
+                  teamName: `${team === 1 ? prev.team1.name : prev.team2.name} PENALTY!`,
+                  playerName: `Kick #${targetIndex + 1} SCORED!`,
+                  timestamp: Date.now(),
+                }
+              : prev.activeAnimation,
+        };
+      });
+    },
+    [setMatch]
+  );
+
+  const addSuddenDeathKick = useCallback(() => {
+    setMatch((prev) => {
+      const pen = prev.penalties || DEFAULT_PENALTIES;
+      return {
+        ...prev,
+        penalties: {
+          ...pen,
+          isActive: true,
+          team1Kicks: [...pen.team1Kicks, 'pending'],
+          team2Kicks: [...pen.team2Kicks, 'pending'],
+        },
+      };
+    });
+  }, [setMatch]);
+
+  const resetPenalties = useCallback(() => {
+    setMatch((prev) => ({
+      ...prev,
+      penalties: DEFAULT_PENALTIES,
+    }));
+  }, [setMatch]);
+
   return (
     <FootballContext.Provider
       value={{
@@ -642,6 +845,11 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateConfig,
         loadPreset,
         resetMatch,
+        togglePenalties,
+        recordPenaltyKick,
+        quickRecordNextPenalty,
+        addSuddenDeathKick,
+        resetPenalties,
       }}
     >
       {children}

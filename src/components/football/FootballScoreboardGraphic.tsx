@@ -795,7 +795,9 @@ export const FootballScoreboardGraphic: React.FC<FootballScoreboardGraphicProps>
       {/* ========================================================================= */}
       {activeAnimation?.type === 'GOAL' && (
         <div
-          className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-[780px] py-3 px-8 rounded-2xl flex items-center justify-between text-white shadow-2xl z-50 animate-bounce"
+          className={`absolute left-1/2 -translate-x-1/2 w-[780px] py-3 px-8 rounded-2xl flex items-center justify-between text-white shadow-2xl z-50 animate-bounce ${
+            match.penalties?.isActive || time.period === 'PEN' ? 'top-[262px]' : '-bottom-16'
+          }`}
           style={{
             background:
               activeAnimation.team === 1
@@ -832,7 +834,9 @@ export const FootballScoreboardGraphic: React.FC<FootballScoreboardGraphicProps>
 
       {(activeAnimation?.type === 'YELLOW_CARD' || activeAnimation?.type === 'RED_CARD') && (
         <div
-          className="absolute -bottom-14 left-1/2 -translate-x-1/2 px-7 py-2.5 rounded-xl flex items-center gap-3.5 bg-slate-950/95 border border-slate-700 shadow-2xl z-50 animate-pulse"
+          className={`absolute left-1/2 -translate-x-1/2 px-7 py-2.5 rounded-xl flex items-center gap-3.5 bg-slate-950/95 border border-slate-700 shadow-2xl z-50 animate-pulse ${
+            match.penalties?.isActive || time.period === 'PEN' ? 'top-[262px]' : '-bottom-14'
+          }`}
         >
           <div
             className={`w-5 h-7 rounded-xs ${
@@ -847,6 +851,137 @@ export const FootballScoreboardGraphic: React.FC<FootballScoreboardGraphicProps>
               {activeAnimation.playerName || activeAnimation.teamName}
             </span>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. SLIDE-DOWN FUTURISTIC SHOOTOUT TRAY (IDEA 2)                           */}
+      {/* ========================================================================= */}
+      {(match.penalties?.isActive || time.period === 'PEN') && (
+        <div className="absolute top-[182px] left-1/2 -translate-x-1/2 w-[980px] z-40 transition-all duration-500 animate-in slide-in-from-top-6 ease-out">
+          {/* Main Beveled Shootout Panel */}
+          <div
+            className="relative px-6 py-3 rounded-2xl flex items-center justify-between text-white shadow-2xl backdrop-blur-xl border border-slate-700/80"
+            style={{
+              background: 'linear-gradient(180deg, #0b1526 0%, #050b14 100%)',
+              boxShadow:
+                '0 16px 36px rgba(0, 0, 0, 0.9), inset 0 1px 1px rgba(255, 255, 255, 0.15)',
+            }}
+          >
+            {/* Top glowing cyan seam matching the central score bottom */}
+            <div className="absolute -top-[1.5px] left-1/2 -translate-x-1/2 w-48 h-[3px] bg-cyan-400 shadow-[0_0_12px_#00d2ff] rounded-full" />
+
+            {/* TEAM 1 (BLUE) PENALTY SLOTS */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00d2ff]" />
+                <span className="font-black text-sm uppercase tracking-wider text-cyan-300 drop-shadow">
+                  {team1.shortName || team1.name.slice(0, 3)}
+                </span>
+              </div>
+
+              {/* Dot Trackers */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-slate-800">
+                {(match.penalties?.team1Kicks || ['pending', 'pending', 'pending', 'pending', 'pending']).map(
+                  (kick, idx) => {
+                    const pen = match.penalties;
+                    const isCurrent =
+                      pen &&
+                      !pen.winner &&
+                      idx === pen.team1Kicks.findIndex((k) => k === 'pending') &&
+                      pen.team2Kicks.filter((k) => k !== 'pending').length === idx;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs transition-all duration-300 ${
+                          kick === 'goal'
+                            ? 'bg-emerald-500 text-slate-950 shadow-[0_0_12px_#10b981] scale-105'
+                            : kick === 'miss'
+                            ? 'bg-rose-600 text-white shadow-[0_0_12px_#ef4444] scale-95'
+                            : isCurrent
+                            ? 'border-2 border-cyan-400 bg-cyan-950/60 text-cyan-300 animate-pulse shadow-[0_0_10px_#00d2ff]'
+                            : 'bg-slate-900 border border-slate-800 text-slate-600'
+                        }`}
+                      >
+                        {kick === 'goal' ? '✓' : kick === 'miss' ? '✕' : idx + 1}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            {/* CENTER SHOOTOUT BADGE & SCORE */}
+            <div className="flex flex-col items-center px-6 border-x border-slate-800/80">
+              <span className="text-[10px] font-black tracking-widest uppercase text-amber-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                PENALTY SHOOTOUT
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-black text-white font-mono drop-shadow-[0_0_10px_rgba(0,210,255,0.5)]">
+                  {match.penalties?.team1Score ?? 0}
+                </span>
+                <span className="text-slate-500 font-black text-sm">-</span>
+                <span className="text-2xl font-black text-white font-mono drop-shadow-[0_0_10px_rgba(255,23,68,0.5)]">
+                  {match.penalties?.team2Score ?? 0}
+                </span>
+              </div>
+            </div>
+
+            {/* TEAM 2 (RED) PENALTY SLOTS */}
+            <div className="flex items-center gap-3">
+              {/* Dot Trackers */}
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/80 border border-slate-800">
+                {(match.penalties?.team2Kicks || ['pending', 'pending', 'pending', 'pending', 'pending']).map(
+                  (kick, idx) => {
+                    const pen = match.penalties;
+                    const isCurrent =
+                      pen &&
+                      !pen.winner &&
+                      idx === pen.team2Kicks.findIndex((k) => k === 'pending') &&
+                      pen.team1Kicks.filter((k) => k !== 'pending').length > idx;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs transition-all duration-300 ${
+                          kick === 'goal'
+                            ? 'bg-emerald-500 text-slate-950 shadow-[0_0_12px_#10b981] scale-105'
+                            : kick === 'miss'
+                            ? 'bg-rose-600 text-white shadow-[0_0_12px_#ef4444] scale-95'
+                            : isCurrent
+                            ? 'border-2 border-rose-400 bg-rose-950/60 text-rose-300 animate-pulse shadow-[0_0_10px_#ff1744]'
+                            : 'bg-slate-900 border border-slate-800 text-slate-600'
+                        }`}
+                      >
+                        {kick === 'goal' ? '✓' : kick === 'miss' ? '✕' : idx + 1}
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="font-black text-sm uppercase tracking-wider text-rose-300 drop-shadow">
+                  {team2.shortName || team2.name.slice(0, 3)}
+                </span>
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#ff1744]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Winner Celebration Plaque */}
+          {match.penalties?.winner && (
+            <div className="mt-2 py-2 px-6 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-black text-xs tracking-wider uppercase text-center shadow-2xl flex items-center justify-center gap-2 animate-bounce">
+              <span>🏆</span>
+              <span>
+                {match.penalties.winner === 1 ? team1.name : team2.name} WINS ON PENALTIES (
+                {match.penalties.team1Score} - {match.penalties.team2Score})!
+              </span>
+              <span>🏆</span>
+            </div>
+          )}
         </div>
       )}
     </div>

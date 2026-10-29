@@ -44,6 +44,11 @@ export const FootballControllerPage: React.FC = () => {
     updateConfig,
     loadPreset,
     resetMatch,
+    togglePenalties,
+    recordPenaltyKick,
+    quickRecordNextPenalty,
+    addSuddenDeathKick,
+    resetPenalties,
   } = useFootball();
 
   const [copied, setCopied] = useState(false);
@@ -539,7 +544,217 @@ export const FootballControllerPage: React.FC = () => {
         </div>
 
         {/* ========================================================================= */}
-        {/* 5. 1920x1080 TOP-LEFT POSITION & OVERLAY CONFIGURATION */}
+        {/* 5. PENALTY SHOOTOUT (PSO) CONTROL CENTER (SLIDE-DOWN TRAY ENGINE)         */}
+        {/* ========================================================================= */}
+        <div className="rounded-2xl border-2 border-amber-500/40 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 p-6 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-amber-400 to-rose-500" />
+
+          {/* Section Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-black text-xl shadow-lg">
+                🎯
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black uppercase tracking-wider text-white">
+                    Penalty Shootout Control Center
+                  </h3>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      match.penalties?.isActive
+                        ? 'bg-amber-500 text-slate-950 animate-pulse shadow-[0_0_8px_#f59e0b]'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {match.penalties?.isActive ? 'Tray Active on Screen' : 'Inactive'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Slide-Down Futuristic Shootout Tray (ড্রপডাউন প্যানেল) লাইভ ব্রডকাস্ট কন্ট্রোল
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle & Action Buttons */}
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => togglePenalties()}
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-lg ${
+                  match.penalties?.isActive
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/30'
+                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/30'
+                }`}
+              >
+                {match.penalties?.isActive ? 'Hide Shootout Tray' : 'Show Shootout Tray'}
+              </button>
+
+              <button
+                onClick={addSuddenDeathKick}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition"
+                title="Add 1 more kick slot for sudden death"
+              >
+                + Sudden Death Kick
+              </button>
+
+              <button
+                onClick={resetPenalties}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-700 transition"
+                title="Reset all penalty kicks"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Shootout Score Display */}
+          <div className="flex items-center justify-between p-4 rounded-xl bg-slate-950 border border-slate-800 mb-6">
+            <div className="text-center flex-1">
+              <span className="text-xs font-black uppercase tracking-wider text-cyan-400">
+                {team1.name}
+              </span>
+              <div className="text-4xl font-black text-white font-mono mt-0.5">
+                {match.penalties?.team1Score ?? 0}
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center px-6 border-x border-slate-800">
+              <span className="text-[11px] font-black uppercase tracking-widest text-amber-400">
+                SHOOTOUT SCORE
+              </span>
+              <span className="text-xs text-slate-400 mt-1">
+                {match.penalties?.winner
+                  ? `🏆 ${match.penalties.winner === 1 ? team1.name : team2.name} Wins!`
+                  : 'In Progress'}
+              </span>
+            </div>
+
+            <div className="text-center flex-1">
+              <span className="text-xs font-black uppercase tracking-wider text-rose-400">
+                {team2.name}
+              </span>
+              <div className="text-4xl font-black text-white font-mono mt-0.5">
+                {match.penalties?.team2Score ?? 0}
+              </div>
+            </div>
+          </div>
+
+          {/* Dual Team Kicks Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Team 1 Penalty Kicks */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-blue-500/30">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-black uppercase text-cyan-300 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
+                  {team1.name} Kicks
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => quickRecordNextPenalty(1, 'goal')}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow transition"
+                  >
+                    + Goal (✓)
+                  </button>
+                  <button
+                    onClick={() => quickRecordNextPenalty(1, 'miss')}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow transition"
+                  >
+                    + Miss (✕)
+                  </button>
+                </div>
+              </div>
+
+              {/* Slot list */}
+              <div className="grid grid-cols-5 gap-2">
+                {(match.penalties?.team1Kicks || ['pending', 'pending', 'pending', 'pending', 'pending']).map(
+                  (kick, idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg bg-slate-900 border border-slate-800"
+                    >
+                      <span className="text-[10px] text-slate-400 font-bold">Kick #{idx + 1}</span>
+                      <button
+                        onClick={() => {
+                          const nextState =
+                            kick === 'pending' ? 'goal' : kick === 'goal' ? 'miss' : 'pending';
+                          recordPenaltyKick(1, idx, nextState);
+                        }}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm transition-all ${
+                          kick === 'goal'
+                            ? 'bg-emerald-500 text-slate-950 shadow-[0_0_10px_#10b981]'
+                            : kick === 'miss'
+                            ? 'bg-rose-600 text-white shadow-[0_0_10px_#ef4444]'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                        }`}
+                        title="Click to toggle: Goal -> Miss -> Pending"
+                      >
+                        {kick === 'goal' ? '✓' : kick === 'miss' ? '✕' : '-'}
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Team 2 Penalty Kicks */}
+            <div className="p-4 rounded-xl bg-slate-950/80 border border-rose-500/30">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-black uppercase text-rose-300 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  {team2.name} Kicks
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => quickRecordNextPenalty(2, 'goal')}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow transition"
+                  >
+                    + Goal (✓)
+                  </button>
+                  <button
+                    onClick={() => quickRecordNextPenalty(2, 'miss')}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow transition"
+                  >
+                    + Miss (✕)
+                  </button>
+                </div>
+              </div>
+
+              {/* Slot list */}
+              <div className="grid grid-cols-5 gap-2">
+                {(match.penalties?.team2Kicks || ['pending', 'pending', 'pending', 'pending', 'pending']).map(
+                  (kick, idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col items-center gap-1 p-2 rounded-lg bg-slate-900 border border-slate-800"
+                    >
+                      <span className="text-[10px] text-slate-400 font-bold">Kick #{idx + 1}</span>
+                      <button
+                        onClick={() => {
+                          const nextState =
+                            kick === 'pending' ? 'goal' : kick === 'goal' ? 'miss' : 'pending';
+                          recordPenaltyKick(2, idx, nextState);
+                        }}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-sm transition-all ${
+                          kick === 'goal'
+                            ? 'bg-emerald-500 text-slate-950 shadow-[0_0_10px_#10b981]'
+                            : kick === 'miss'
+                            ? 'bg-rose-600 text-white shadow-[0_0_10px_#ef4444]'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                        }`}
+                        title="Click to toggle: Goal -> Miss -> Pending"
+                      >
+                        {kick === 'goal' ? '✓' : kick === 'miss' ? '✕' : '-'}
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 6. 1920x1080 TOP-LEFT POSITION & OVERLAY CONFIGURATION */}
         {/* ========================================================================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl">

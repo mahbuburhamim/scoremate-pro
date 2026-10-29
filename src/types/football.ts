@@ -49,6 +49,21 @@ export interface FootballScoreboardConfig {
   soundEnabled: boolean;
 }
 
+export type PenaltyKickResult = 'goal' | 'miss' | 'pending';
+
+export interface PenaltyShootoutState {
+  isActive: boolean;
+  team1Kicks: PenaltyKickResult[];
+  team2Kicks: PenaltyKickResult[];
+  team1Score: number;
+  team2Score: number;
+  currentTurn: {
+    team: 1 | 2;
+    kickIndex: number;
+  };
+  winner: 1 | 2 | null;
+}
+
 export interface FootballMatch {
   id: string;
   title: string;
@@ -58,6 +73,7 @@ export interface FootballMatch {
   time: FootballTimeState;
   goals: FootballGoalEvent[];
   activeAnimation: FootballAnimation | null;
+  penalties?: PenaltyShootoutState;
   config: FootballScoreboardConfig;
   updatedAt: number;
 }
