@@ -69,7 +69,7 @@ export const DEFAULT_FOOTBALL_MATCH: FootballMatch = {
     showPeriodBadge: true,
     soundEnabled: true,
   },
-  updatedAt: Date.now(),
+  updatedAt: 0,
 };
 
 export const FOOTBALL_PRESETS: Record<string, Partial<FootballMatch>> = {
@@ -231,21 +231,53 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const matchRef = useRef<FootballMatch>(match);
   matchRef.current = match;
 
-  // Broadcast and persist helper
-  const broadcastAndSave = useCallback((newMatch: FootballMatch, skipBroadcast = false) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newMatch));
-    } catch {}
+  const isOverlay = typeof window !== 'undefined' && window.location.pathname.includes('/overlay');
 
-    if (!skipBroadcast && syncChannelRef.current) {
+  // Send network sync to /api/match and Hostinger /api/sync.php
+  const sendNetworkSync = useCallback((targetMatch: FootballMatch) => {
+    if (isOverlay) return; // Overlays are pure consumers; never overwrite server state!
+    try {
+      const payload = JSON.stringify({
+        footballMatch: targetMatch,
+        timestamp: Date.now(),
+      });
+      fetch('/api/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => {
+        fetch('/api/sync.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+        }).catch(() => {});
+      });
+    } catch {}
+  }, [isOverlay]);
+
+  // Broadcast and persist helper
+  const broadcastAndSave = useCallback(
+    (newMatch: FootballMatch, skipBroadcast = false) => {
       try {
-        syncChannelRef.current.postMessage({
-          type: 'MATCH_UPDATE',
-          match: newMatch,
-        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newMatch));
       } catch {}
-    }
-  }, []);
+
+      if (!skipBroadcast && syncChannelRef.current) {
+        try {
+          syncChannelRef.current.postMessage({
+            type: 'MATCH_UPDATE',
+            match: newMatch,
+          });
+        } catch {}
+      }
+
+      // Relay to server (Node/Vite or Hostinger Apache sync.php)
+      if (!isOverlay) {
+        sendNetworkSync(newMatch);
+      }
+    },
+    [sendNetworkSync, isOverlay]
+  );
 
   const setMatch: React.Dispatch<React.SetStateAction<FootballMatch>> = useCallback(
     (action) => {
@@ -259,8 +291,50 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [broadcastAndSave]
   );
 
-  // Setup BroadcastChannel and storage event listeners for 0ms cross-tab & OBS CEF sync
+  // Setup BroadcastChannel, network polling fallback and storage event listeners
   useEffect(() => {
+    // 0. Initial resolution from /api/match and /api/sync.php
+    const acceptMatch = (incoming: FootballMatch) => {
+      if (
+        incoming &&
+        incoming.team1 &&
+        incoming.team2 &&
+        ((incoming.updatedAt || 0) >= (matchRef.current.updatedAt || 0) || (matchRef.current.updatedAt || 0) === 0)
+      ) {
+        setMatchState(incoming);
+      }
+    };
+
+    const fetchInitial = () => {
+      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.footballMatch) {
+            acceptMatch(data.footballMatch);
+          } else if (!isOverlay) {
+            sendNetworkSync(matchRef.current);
+          }
+        })
+        .catch(() => {
+          fetch(`/api/sync.php?_t=${Date.now()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (data?.footballMatch) {
+                acceptMatch(data.footballMatch);
+              } else if (!isOverlay) {
+                sendNetworkSync(matchRef.current);
+              }
+            })
+            .catch(() => {});
+        });
+    };
+    fetchInitial();
+
+    // If controller, push initial state to server so OBS always has it ready
+    if (!isOverlay) {
+      sendNetworkSync(matchRef.current);
+    }
+
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         const channel = new BroadcastChannel(SYNC_CHANNEL_NAME);
@@ -268,10 +342,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         channel.onmessage = (event) => {
           if (event.data?.type === 'MATCH_UPDATE' && event.data?.match) {
-            const incoming = event.data.match;
-            if (incoming.updatedAt > (matchRef.current.updatedAt || 0)) {
-              setMatchState(incoming);
-            }
+            acceptMatch(event.data.match);
           }
         };
       }
@@ -283,8 +354,8 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          if (parsed && parsed.updatedAt > (matchRef.current.updatedAt || 0)) {
-            setMatchState(parsed);
+          if (parsed) {
+            acceptMatch(parsed);
           }
         } catch {}
       }
@@ -296,11 +367,11 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       window.removeEventListener('storage', handleStorage);
       syncChannelRef.current?.close();
     };
-  }, []);
+  }, [isOverlay, sendNetworkSync]);
 
-  // Live Timer Ticker: Only the active runner tab advances the clock
+  // Live Timer Ticker: Only the active runner controller tab advances the master clock
   useEffect(() => {
-    if (!match.time.isRunning) return;
+    if (!match.time.isRunning || isOverlay) return;
 
     const timer = setInterval(() => {
       setMatchState((prev) => {
@@ -330,7 +401,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [match.time.isRunning, broadcastAndSave]);
+  }, [match.time.isRunning, isOverlay, broadcastAndSave]);
 
   // Score updates
   const updateScore = useCallback(

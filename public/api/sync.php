@@ -35,14 +35,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!empty($rawInput)) {
         $parsed = json_decode($rawInput, true);
         if ($parsed && is_array($parsed)) {
+            $existing = [];
+            if (file_exists($dataFile)) {
+                $rawExisting = @file_get_contents($dataFile);
+                if (!empty($rawExisting)) {
+                    $existing = json_decode($rawExisting, true) ?: [];
+                }
+            }
+            $merged = array_merge($existing, $parsed);
+            $merged['timestamp'] = round(microtime(true) * 1000);
+
             // Write atomically to storage
             $tempFile = $dataFile . '.tmp.' . uniqid();
-            if (@file_put_contents($tempFile, $rawInput) !== false) {
+            if (@file_put_contents($tempFile, json_encode($merged, JSON_UNESCAPED_UNICODE)) !== false) {
                 @rename($tempFile, $dataFile);
             }
             echo json_encode([
                 'success' => true,
-                'timestamp' => round(microtime(true) * 1000)
+                'timestamp' => $merged['timestamp']
             ]);
             exit;
         }

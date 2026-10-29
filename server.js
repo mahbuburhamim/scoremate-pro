@@ -81,17 +81,28 @@ const server = http.createServer((req, res) => {
           const cached = readData();
           if (!cached.users) cached.users = {};
           const uid = payload.userId || 'default';
-          cached.users[uid] = {
-            matches: payload.matches || [],
-            activeMatchId: payload.activeMatchId || null,
-            timestamp: payload.timestamp || Date.now(),
-          };
+          
+          if (!cached.users[uid]) {
+            cached.users[uid] = {
+              matches: payload.matches || [],
+              activeMatchId: payload.activeMatchId || null,
+              footballMatch: payload.footballMatch || null,
+              timestamp: payload.timestamp || Date.now(),
+            };
+          } else {
+            if (payload.matches) cached.users[uid].matches = payload.matches;
+            if (payload.activeMatchId !== undefined) cached.users[uid].activeMatchId = payload.activeMatchId;
+            if (payload.footballMatch) cached.users[uid].footballMatch = payload.footballMatch;
+            cached.users[uid].timestamp = payload.timestamp || Date.now();
+          }
           writeData(cached);
+
           const sseData = JSON.stringify({
-            type: 'MATCHES_SYNC',
+            type: payload.footballMatch ? 'FOOTBALL_SYNC' : 'MATCHES_SYNC',
             userId: uid,
-            matches: payload.matches,
-            activeMatchId: payload.activeMatchId,
+            matches: cached.users[uid].matches,
+            activeMatchId: cached.users[uid].activeMatchId,
+            footballMatch: cached.users[uid].footballMatch,
             timestamp: Date.now(),
           });
           sseClients.forEach((client) => {
@@ -100,7 +111,7 @@ const server = http.createServer((req, res) => {
             } catch {}
           });
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true }));
+          res.end(JSON.stringify({ ok: true, footballMatch: cached.users[uid].footballMatch }));
         } catch {
           res.writeHead(400);
           res.end(JSON.stringify({ error: 'invalid json' }));
@@ -120,15 +131,26 @@ const server = http.createServer((req, res) => {
           const found = cached.users[uid]?.matches?.find((m) => m.id === matchId);
           if (found) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ matches: cached.users[uid].matches, activeMatchId: matchId, timestamp: cached.users[uid].timestamp }));
+            res.end(JSON.stringify({
+              matches: [found],
+              activeMatchId: matchId,
+              footballMatch: cached.users[uid].footballMatch || null,
+              timestamp: cached.users[uid].timestamp
+            }));
             return;
           }
         }
       }
 
-      const userData = cached.users[userId] || { matches: [], activeMatchId: null, timestamp: 0 };
+      const userData = cached.users[userId] || Object.values(cached.users)[0] || { matches: [], activeMatchId: null, footballMatch: null, timestamp: 0 };
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ matches: userData.matches, activeMatchId: userData.activeMatchId, timestamp: userData.timestamp, userId }));
+      res.end(JSON.stringify({
+        matches: userData.matches,
+        activeMatchId: userData.activeMatchId,
+        footballMatch: userData.footballMatch || null,
+        timestamp: userData.timestamp,
+        userId
+      }));
       return;
     }
   }

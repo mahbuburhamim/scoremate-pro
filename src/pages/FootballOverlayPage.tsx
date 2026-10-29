@@ -1,17 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFootball } from '../context/FootballContext';
+import { FootballMatch } from '../types/football';
 import { FootballScoreboardGraphic } from '../components/football/FootballScoreboardGraphic';
 import confetti from 'canvas-confetti';
 import { Eye, EyeOff, Monitor, Sparkles, Sliders, Volume2, VolumeX } from 'lucide-react';
 
+const SYNC_CHANNEL_NAME = 'footscore_live_sync';
+const STORAGE_KEY = 'footscore_active_match';
+
 export const FootballOverlayPage: React.FC = () => {
-  const { match, clearAnimation, updateConfig } = useFootball();
+  const { match: contextMatch, clearAnimation, updateConfig, setMatch } = useFootball();
   const [searchParams] = useSearchParams();
 
+  // Direct live match state from SSE / API feeds (bypasses isolated CEF sandboxes)
+  const [directMatch, setDirectMatch] = useState<FootballMatch | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'connected' | 'polling'>('polling');
+
   // Test bar & stadium background states
+  const isObs =
+    searchParams.get('obs') === '1' ||
+    searchParams.get('clean') === '1' ||
+    (typeof window !== 'undefined' && (window as any).obsstudio !== undefined);
+
   const [showStadiumBg, setShowStadiumBg] = useState<boolean>(false);
-  const [showTestBar, setShowTestBar] = useState<boolean>(true);
+  const [showTestBar, setShowTestBar] = useState<boolean>(!isObs);
   const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   // Window size for scaling 1920x1080 canvas
@@ -50,6 +63,101 @@ export const FootballOverlayPage: React.FC = () => {
       document.documentElement.style.backgroundColor = '';
     };
   }, [showStadiumBg]);
+
+  // Handle incoming match update from SSE, Polling, or BroadcastChannel
+  const handleIncomingMatch = useCallback(
+    (incoming: FootballMatch) => {
+      if (!incoming || !incoming.team1 || !incoming.team2) return;
+      setDirectMatch((prev) => {
+        if (!prev || JSON.stringify(prev) !== JSON.stringify(incoming)) {
+          return incoming;
+        }
+        return prev;
+      });
+      setSyncStatus('connected');
+    },
+    []
+  );
+
+  // =========================================================================
+  // ZERO-LATENCY OBS LIVE SYNCHRONIZATION ENGINE (SSE + 250ms POLLING + BROADCAST)
+  // =========================================================================
+  useEffect(() => {
+    // 1. Direct Local SSE (/api/events) - instant push for OBS Studio CEF
+    let sse: EventSource | null = null;
+    try {
+      sse = new EventSource('/api/events');
+      sse.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data);
+          if (parsed?.footballMatch) {
+            handleIncomingMatch(parsed.footballMatch);
+          }
+        } catch {}
+      };
+      sse.onopen = () => setSyncStatus('connected');
+    } catch {}
+
+    // 2. Fast 250ms Polling Loop (checks /api/match first, falls back to Hostinger's /api/sync.php)
+    const pollTimer = setInterval(() => {
+      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.footballMatch) {
+            handleIncomingMatch(data.footballMatch);
+          } else {
+            throw new Error('Fallback to sync.php');
+          }
+        })
+        .catch(() => {
+          // Direct fallback to Hostinger Apache sync.php
+          fetch(`/api/sync.php?_t=${Date.now()}`, { cache: 'no-store' })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (data?.footballMatch) {
+                handleIncomingMatch(data.footballMatch);
+              }
+            })
+            .catch(() => {});
+        });
+    }, 250);
+
+    // 3. BroadcastChannel for same-device cross-tab sync
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        channel = new BroadcastChannel(SYNC_CHANNEL_NAME);
+        channel.onmessage = (event) => {
+          if (event.data?.type === 'MATCH_UPDATE' && event.data?.match) {
+            handleIncomingMatch(event.data.match);
+          }
+        };
+      }
+    } catch {}
+
+    // 4. LocalStorage storage event
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed && parsed.team1 && parsed.team2) {
+            handleIncomingMatch(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      sse?.close();
+      clearInterval(pollTimer);
+      channel?.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [handleIncomingMatch]);
+
+  // Direct live match takes precedence over context
+  const match = directMatch || contextMatch;
 
   // Goal celebration effects
   const lastAnimationRef = useRef<number>(0);
@@ -102,7 +210,6 @@ export const FootballOverlayPage: React.FC = () => {
       {/* Stadium Pitch Simulation Graphic when Pitch Preview is ON */}
       {showStadiumBg && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-          {/* Unsplash football match stadium texture with fallback gradient */}
           <div
             className="absolute inset-0 bg-cover bg-center opacity-65"
             style={{
@@ -112,22 +219,18 @@ export const FootballOverlayPage: React.FC = () => {
           />
           {/* Pitch lines & floodlight overlay */}
           <svg className="absolute inset-0 w-full h-full opacity-35" viewBox="0 0 1920 1080">
-            {/* Center Line */}
             <line x1="960" y1="0" x2="960" y2="1080" stroke="#ffffff" strokeWidth="4" />
-            {/* Center Circle */}
             <circle cx="960" cy="540" r="180" fill="none" stroke="#ffffff" strokeWidth="4" />
             <circle cx="960" cy="540" r="6" fill="#ffffff" />
-            {/* Left Penalty Box */}
             <rect x="0" y="270" width="320" height="540" fill="none" stroke="#ffffff" strokeWidth="4" />
-            {/* Right Penalty Box */}
             <rect x="1600" y="270" width="320" height="540" fill="none" stroke="#ffffff" strokeWidth="4" />
           </svg>
-          {/* Stadium Floodlight Cones */}
           <div className="absolute -top-32 left-1/4 w-[600px] h-[600px] bg-cyan-400/15 rounded-full blur-[140px]" />
           <div className="absolute -top-32 right-1/4 w-[600px] h-[600px] bg-amber-400/15 rounded-full blur-[140px]" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-slate-950/50" />
         </div>
       )}
+
       {/* Subtle OBS / Testing control pill in top-right (hidden in iframe) */}
       {!isInsideIframe && (
         <>
@@ -137,11 +240,17 @@ export const FootballOverlayPage: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2.5 px-3 py-2 rounded-full bg-slate-950/90 border border-slate-700/80 text-xs text-white shadow-2xl backdrop-blur-md">
-              {/* OBS Status */}
+              {/* OBS Live Sync Status Badge */}
               <div className="flex items-center gap-1.5 px-2 border-r border-slate-800">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]" />
-                <span className="text-[11px] font-mono font-bold text-emerald-400">
-                  OBS 1920x1080
+                <span
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    syncStatus === 'connected'
+                      ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]'
+                      : 'bg-amber-400'
+                  }`}
+                />
+                <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                  {syncStatus === 'connected' ? 'OBS LIVE' : 'SYNCING'}
                 </span>
               </div>
 

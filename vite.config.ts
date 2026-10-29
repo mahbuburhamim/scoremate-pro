@@ -13,6 +13,7 @@ function liveSyncPlugin(): Plugin {
   interface UserSyncStore {
     matches: any[] | null;
     activeMatchId: string | null;
+    footballMatch?: any | null;
     timestamp: number;
   }
 
@@ -114,17 +115,52 @@ function liveSyncPlugin(): Plugin {
           const targetUser = data.userId || 'default';
           if (!cachedData.users) cachedData.users = {};
 
+          if (data.footballMatch) {
+            if (!cachedData.users[targetUser]) {
+              cachedData.users[targetUser] = {
+                matches: [],
+                activeMatchId: null,
+                footballMatch: data.footballMatch,
+                timestamp: Date.now(),
+              };
+            } else {
+              cachedData.users[targetUser].footballMatch = data.footballMatch;
+              cachedData.users[targetUser].timestamp = Date.now();
+            }
+            writeCachedData(cachedData);
+
+            const payload = `data: ${JSON.stringify({
+              type: 'FOOTBALL_SYNC',
+              userId: targetUser,
+              footballMatch: data.footballMatch,
+              timestamp: Date.now(),
+            })}\n\n`;
+            for (const client of sseClients) {
+              try {
+                client.write(payload);
+              } catch {
+                sseClients.delete(client);
+              }
+            }
+          }
+
           if (
             data.matches &&
             Array.isArray(data.matches) &&
             data.matches.some((m: any) => m && m.team1 && m.innings)
           ) {
             const activeId = data.activeMatchId || data.matches[0]?.id;
-            cachedData.users[targetUser] = {
-              matches: data.matches,
-              activeMatchId: activeId,
-              timestamp: Date.now(),
-            };
+            if (!cachedData.users[targetUser]) {
+              cachedData.users[targetUser] = {
+                matches: data.matches,
+                activeMatchId: activeId,
+                timestamp: Date.now(),
+              };
+            } else {
+              cachedData.users[targetUser].matches = data.matches;
+              cachedData.users[targetUser].activeMatchId = activeId;
+              cachedData.users[targetUser].timestamp = Date.now();
+            }
             writeCachedData(cachedData);
 
             const payload = `data: ${JSON.stringify({
@@ -176,6 +212,7 @@ function liveSyncPlugin(): Plugin {
             JSON.stringify({
               success: true,
               activeMatchId: cachedData.users[targetUser]?.activeMatchId,
+              footballMatch: cachedData.users[targetUser]?.footballMatch,
             })
           );
         } catch {
@@ -216,6 +253,7 @@ function liveSyncPlugin(): Plugin {
               JSON.stringify({
                 matches: [found],
                 activeMatchId: qMatchId,
+                footballMatch: userStore.footballMatch || null,
                 timestamp: userStore.timestamp || Date.now(),
               })
             );
@@ -231,6 +269,7 @@ function liveSyncPlugin(): Plugin {
           JSON.stringify({
             matches: uStore.matches,
             activeMatchId: uStore.activeMatchId,
+            footballMatch: uStore.footballMatch || null,
             timestamp: uStore.timestamp || Date.now(),
           })
         );
@@ -243,6 +282,7 @@ function liveSyncPlugin(): Plugin {
         JSON.stringify({
           matches: defaultUser?.matches || null,
           activeMatchId: defaultUser?.activeMatchId || null,
+          footballMatch: defaultUser?.footballMatch || null,
           timestamp: defaultUser?.timestamp || Date.now(),
         })
       );
