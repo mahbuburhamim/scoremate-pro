@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User as UserIcon, Phone, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { GoogleSignInButton } from './GoogleSignInButton';
 
 export const AuthModal: React.FC = () => {
-  const { authModalOpen, authModalMode, closeAuthModal, openAuthModal, login, signup } = useAuth();
+  const { authModalOpen, authModalMode, closeAuthModal, openAuthModal, login, signup, requestPasswordReset, appConfig } = useAuth();
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -11,10 +12,36 @@ export const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   if (!authModalOpen) return null;
 
   const isLogin = authModalMode === 'login';
+  const isForgot = authModalMode === 'forgot';
+
+  const switchMode = (mode: 'login' | 'signup' | 'forgot') => {
+    setErrorMsg('');
+    setInfoMsg('');
+    openAuthModal(mode);
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setInfoMsg('');
+    if (!email.trim()) {
+      setErrorMsg('আপনার account এর ইমেইল দিন');
+      return;
+    }
+    setIsLoading(true);
+    const result = await requestPasswordReset(email);
+    setIsLoading(false);
+    if (!result.ok) {
+      setErrorMsg(result.error || 'কিছু একটা ভুল হয়েছে, আবার চেষ্টা করুন');
+      return;
+    }
+    setInfoMsg('এই ইমেইলে account থাকলে পাসওয়ার্ড রিসেটের লিংক পাঠানো হয়েছে। Inbox আর Spam দুটোই দেখুন। লিংকটি ৩০ মিনিট কাজ করবে।');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,10 +94,12 @@ export const AuthModal: React.FC = () => {
             <Lock className="w-6 h-6" />
           </div>
           <h2 className="font-heading font-black text-2xl text-slate-900">
-            {isLogin ? 'Sign in to IconicScorer' : 'Create an Account'}
+            {isForgot ? 'পাসওয়ার্ড ভুলে গেছেন?' : isLogin ? 'Sign in to IconicScorer' : 'Create an Account'}
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-xs">
-            {isLogin
+            {isForgot
+              ? 'আপনার account এর ইমেইল দিন, নতুন পাসওয়ার্ড সেট করার লিংক পাঠিয়ে দেব।'
+              : isLogin
               ? 'Access your live cricket broadcast dashboard & active match controller'
               : 'Join IconicScorer to unlock professional broadcast overlays & scoreboards'}
           </p>
@@ -82,6 +111,46 @@ export const AuthModal: React.FC = () => {
             {errorMsg}
           </div>
         )}
+
+        {infoMsg && (
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs text-center font-medium">
+            {infoMsg}
+          </div>
+        )}
+
+        {isForgot ? (
+          appConfig.emailEnabled ? (
+            <form onSubmit={handleForgot} className="flex flex-col gap-3.5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                <div className="relative flex items-center">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@domain.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none text-sm text-slate-900 placeholder-slate-400 font-medium transition"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-1 w-full py-3 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-sm uppercase tracking-wider active:scale-95 transition"
+              >
+                {isLoading ? 'পাঠানো হচ্ছে...' : 'Reset Link পাঠান'}
+              </button>
+            </form>
+          ) : (
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-relaxed text-center">
+              পাসওয়ার্ড রিসেট করতে <a href="/contact" className="font-bold underline">Contact পেজে</a> আপনার account এর ইমেইল দিয়ে যোগাযোগ করুন। আমরা আপনাকে একটি রিসেট লিংক পাঠিয়ে দেব।
+            </div>
+          )
+        ) : (
+        <>
+        <GoogleSignInButton text={isLogin ? 'signin_with' : 'signup_with'} onError={setErrorMsg} />
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
@@ -134,7 +203,18 @@ export const AuthModal: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700">Password</label>
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={() => switchMode('forgot')}
+                  className="text-[11px] font-bold text-blue-600 hover:underline"
+                >
+                  পাসওয়ার্ড ভুলে গেছেন?
+                </button>
+              )}
+            </div>
             <div className="relative flex items-center">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
               <input
@@ -165,14 +245,23 @@ export const AuthModal: React.FC = () => {
             )}
           </button>
         </form>
+        </>
+        )}
 
         {/* Toggle Mode */}
         <div className="text-center text-xs text-slate-500">
-          {isLogin ? (
+          {isForgot ? (
+            <p>
+              পাসওয়ার্ড মনে পড়েছে?{' '}
+              <button onClick={() => switchMode('login')} className="text-blue-600 font-bold hover:underline">
+                Log in
+              </button>
+            </p>
+          ) : isLogin ? (
             <p>
               Don't have an account?{' '}
               <button
-                onClick={() => openAuthModal('signup')}
+                onClick={() => switchMode('signup')}
                 className="text-blue-600 font-bold hover:underline"
               >
                 Create Account
@@ -182,7 +271,7 @@ export const AuthModal: React.FC = () => {
             <p>
               Already have an account?{' '}
               <button
-                onClick={() => openAuthModal('login')}
+                onClick={() => switchMode('login')}
                 className="text-blue-600 font-bold hover:underline"
               >
                 Log in here

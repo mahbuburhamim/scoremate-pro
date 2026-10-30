@@ -6,6 +6,7 @@
  * POST {action: approve|reject, paymentId, note?}
  * POST {action: grant, email, planId}      (give a plan without a payment, e.g. a friend or refund fix)
  * POST {action: revoke, email}             (end someone's subscription now)
+ * POST {action: reset_link, email}         (one-time password reset link to send the customer yourself, valid 24h)
  */
 require_once __DIR__ . '/_lib.php';
 
@@ -78,6 +79,15 @@ if ($action === 'approve' || $action === 'reject') {
         ->execute([$action === 'approve' ? 'approved' : 'rejected', clean_str($in['note'] ?? '', 255) ?: null, now_ms(), $id]);
     $pdo->commit();
     out(['ok' => true]);
+}
+
+if ($action === 'reset_link') {
+    $email = strtolower(clean_str($in['email'] ?? '', 190));
+    $q = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+    $q->execute([$email]);
+    $target = $q->fetch();
+    if (!$target) fail('এই ইমেইলের কোনো account নেই', 404);
+    out(['ok' => true, 'link' => create_reset_link((int) $target['id'], 24 * 60)]);
 }
 
 if ($action === 'grant' || $action === 'revoke') {

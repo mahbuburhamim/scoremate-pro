@@ -7,7 +7,7 @@
 if (defined('ICONIC_LIB')) return;
 define('ICONIC_LIB', 1);
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const SESSION_COOKIE = 'is_session';
 const SESSION_DAYS = 30;
 
@@ -165,6 +165,16 @@ function migrate(PDO $pdo): void {
         INDEX idx_attempts_ip (ip, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS password_resets (
+        token_hash CHAR(64) PRIMARY KEY,
+        user_id INT UNSIGNED NOT NULL,
+        created_at BIGINT NOT NULL,
+        expires_at BIGINT NOT NULL,
+        used_at BIGINT NULL,
+        INDEX idx_resets_user (user_id),
+        INDEX idx_resets_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     @file_put_contents($flag, (string) time());
 }
 
@@ -299,4 +309,115 @@ function clean_str($v, int $max): string {
     $s = trim((string) $v);
     if (function_exists('mb_substr')) return mb_substr($s, 0, $max);
     return substr($s, 0, $max);
+}
+
+/** Public site address used in emails and links */
+function app_url(): string {
+    $u = trim((string) (config()['APP_URL'] ?? ''));
+    if ($u !== '') return rtrim($u, '/');
+    $host = preg_replace('/[^a-z0-9.\-:]/i', '', $_SERVER['HTTP_HOST'] ?? 'iconicscorer.com');
+    return (is_https() ? 'https://' : 'http://') . $host;
+}
+
+function google_client_id(): string {
+    return trim((string) (config()['GOOGLE_CLIENT_ID'] ?? ''));
+}
+
+function email_enabled(): bool {
+    $c = config();
+    return !empty($c['SMTP_HOST']) && !empty($c['SMTP_USER']) && !empty($c['SMTP_PASS']);
+}
+
+/** Creates a one-time password reset link (stores only a hash of the token). */
+function create_reset_link(int $userId, int $validMinutes): string {
+    $token = bin2hex(random_bytes(32));
+    $now = now_ms();
+    db()->prepare('INSERT INTO password_resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
+        ->execute([hash('sha256', $token), $userId, $now, $now + $validMinutes * 60000]);
+    return app_url() . '/reset-password?token=' . $token;
+}
+
+/**
+ * Minimal SMTP sender (SSL on 465, STARTTLS on 587, or plain for local tests).
+ * Returns true on success; logs the reason on failure. No external libraries needed.
+ */
+function smtp_send(string $to, string $subject, string $text, string $html): bool {
+    $c = config();
+    $host = (string) ($c['SMTP_HOST'] ?? '');
+    $port = (int) ($c['SMTP_PORT'] ?? 465);
+    $secure = strtolower((string) ($c['SMTP_SECURE'] ?? ($port === 465 ? 'ssl' : 'tls')));
+    $user = (string) ($c['SMTP_USER'] ?? '');
+    $pass = (string) ($c['SMTP_PASS'] ?? '');
+    $from = (string) ($c['MAIL_FROM'] ?? $user);
+    $fromName = (string) ($c['MAIL_FROM_NAME'] ?? 'IconicScorer');
+    if ($host === '' || $user === '' || $pass === '') return false;
+
+    $remote = ($secure === 'ssl' ? 'ssl://' : 'tcp://') . $host . ':' . $port;
+    $ctx = stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true, 'peer_name' => $host]]);
+    $fp = @stream_socket_client($remote, $errno, $errstr, 8, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$fp) {
+        error_log("IconicScorer SMTP connect failed: $errstr ($errno)");
+        return false;
+    }
+    stream_set_timeout($fp, 10);
+
+    $read = function () use ($fp): string {
+        $data = '';
+        while (($line = fgets($fp, 515)) !== false) {
+            $data .= $line;
+            if (strlen($line) < 4 || $line[3] === ' ') break;
+        }
+        return $data;
+    };
+    $cmd = function (string $line, array $okCodes) use ($fp, $read): bool {
+        if ($line !== '') fwrite($fp, $line . "\r\n");
+        $resp = $read();
+        $code = (int) substr($resp, 0, 3);
+        if (!in_array($code, $okCodes, true)) {
+            error_log('IconicScorer SMTP unexpected reply to ' . strtok($line, ' ') . ': ' . trim($resp));
+            return false;
+        }
+        return true;
+    };
+
+    $ehloHost = preg_replace('/[^a-z0-9.\-]/i', '', parse_url(app_url(), PHP_URL_HOST) ?: 'localhost');
+    $ok = $cmd('', [220]) && $cmd("EHLO $ehloHost", [250]);
+    if ($ok && $secure === 'tls') {
+        $ok = $cmd('STARTTLS', [220])
+            && @stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)
+            && $cmd("EHLO $ehloHost", [250]);
+    }
+    $ok = $ok
+        && $cmd('AUTH LOGIN', [334])
+        && $cmd(base64_encode($user), [334])
+        && $cmd(base64_encode($pass), [235])
+        && $cmd('MAIL FROM:<' . $from . '>', [250])
+        && $cmd('RCPT TO:<' . $to . '>', [250, 251])
+        && $cmd('DATA', [354]);
+    if (!$ok) {
+        fclose($fp);
+        return false;
+    }
+
+    $boundary = 'b' . bin2hex(random_bytes(8));
+    $encodedName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
+    $headers = [
+        'Date: ' . date('r'),
+        'From: ' . $encodedName . ' <' . $from . '>',
+        'To: <' . $to . '>',
+        'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
+        'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . $ehloHost . '>',
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
+    ];
+    $body = '--' . $boundary . "\r\n"
+        . "Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+        . chunk_split(base64_encode($text)) . '--' . $boundary . "\r\n"
+        . "Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+        . chunk_split(base64_encode($html)) . '--' . $boundary . "--\r\n";
+    fwrite($fp, implode("\r\n", $headers) . "\r\n\r\n" . $body . "\r\n.\r\n");
+    $sent = $cmd('', [250]);
+    $cmd('QUIT', [221]);
+    fclose($fp);
+    return $sent;
 }

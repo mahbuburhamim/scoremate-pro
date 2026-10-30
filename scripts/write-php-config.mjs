@@ -3,7 +3,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const keys = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS', 'ADMIN_EMAILS'];
+const keys = [
+  'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS', 'ADMIN_EMAILS', 'APP_URL',
+  'GOOGLE_CLIENT_ID',
+  'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM', 'MAIL_FROM_NAME',
+];
 const cfg = {};
 for (const k of keys) if (process.env[k]) cfg[k] = process.env[k];
 

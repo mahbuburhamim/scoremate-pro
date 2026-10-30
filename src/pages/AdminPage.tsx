@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Check, X, RefreshCw, ShieldCheck, Search, Gift, Ban } from 'lucide-react';
+import { Check, X, RefreshCw, ShieldCheck, Search, Gift, Ban, KeyRound, Copy } from 'lucide-react';
 import { useAuth, SUBSCRIPTION_PLANS } from '../context/AuthContext';
 import { api } from '../utils/api';
 
@@ -46,6 +46,13 @@ export const AdminPage: React.FC = () => {
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [grantEmail, setGrantEmail] = useState('');
   const [grantPlan, setGrantPlan] = useState(SUBSCRIPTION_PLANS[0].id);
+  const [resetLink, setResetLink] = useState<{ email: string; link: string } | null>(null);
+
+  const makeResetLink = async (email: string) => {
+    const res = await api.admin.resetLink(email);
+    if (res.ok) setResetLink({ email, link: res.data.link });
+    else setMessage({ type: 'err', text: res.error || 'Failed' });
+  };
 
   const loadPayments = useCallback(async () => {
     const res = await api.admin.payments(status);
@@ -251,6 +258,29 @@ export const AdminPage: React.FC = () => {
             <button onClick={grant} className="px-4 py-2 rounded-full bg-emerald-600 text-white font-bold">Give</button>
           </div>
 
+          {resetLink && (
+            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-xs flex flex-col gap-2">
+              <div className="font-bold text-blue-900">
+                {resetLink.email} এর পাসওয়ার্ড রিসেট লিংক (২৪ ঘণ্টা কাজ করবে, একবারই ব্যবহার করা যাবে)। কাস্টমারকে WhatsApp বা ইমেইলে পাঠান:
+              </div>
+              <div className="flex gap-2 items-center">
+                <code className="flex-1 p-2 rounded-lg bg-white border border-blue-200 break-all">{resetLink.link}</code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(resetLink.link);
+                    setMessage({ type: 'ok', text: 'Link copied' });
+                  }}
+                  className="px-3 py-2 rounded-full bg-blue-600 text-white font-bold inline-flex items-center gap-1"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Copy
+                </button>
+                <button onClick={() => setResetLink(null)} className="p-2 rounded-full hover:bg-blue-100" title="Close">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
             <table className="w-full text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider">
@@ -281,7 +311,14 @@ export const AdminPage: React.FC = () => {
                       </td>
                       <td className="p-3 whitespace-nowrap">{fmt(u.plan_expires_at)}</td>
                       <td className="p-3 whitespace-nowrap">{fmt(u.created_at)}</td>
-                      <td className="p-3 text-right">
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => makeResetLink(u.email)}
+                          title="Password reset link"
+                          className="mr-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-blue-50 text-blue-700 font-bold inline-flex items-center gap-1"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" /> Reset link
+                        </button>
                         {active && u.role !== 'admin' && (
                           <button onClick={() => revoke(u.email)} className="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-red-50 text-red-600 font-bold inline-flex items-center gap-1">
                             <Ban className="w-3.5 h-3.5" /> End

@@ -60,15 +60,22 @@ interface AuthContextType {
   isAdmin: boolean;
   hasActiveSubscription: boolean;
   authModalOpen: boolean;
-  authModalMode: 'login' | 'signup';
-  openAuthModal: (mode?: 'login' | 'signup') => void;
+  authModalMode: AuthModalMode;
+  openAuthModal: (mode?: AuthModalMode) => void;
   closeAuthModal: () => void;
   login: (email: string, password: string) => Promise<AuthResult>;
   signup: (name: string, email: string, password: string, phone?: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   submitPayment: (plan: Plan, method: 'bkash' | 'nagad', trxId: string, sender?: string) => Promise<AuthResult>;
+  loginWithGoogle: (credential: string) => Promise<AuthResult>;
+  requestPasswordReset: (email: string) => Promise<AuthResult>;
+  resetPassword: (token: string, password: string) => Promise<AuthResult>;
+  /** Server features that depend on hosting settings */
+  appConfig: { googleClientId: string | null; emailEnabled: boolean };
 }
+
+export type AuthModalMode = 'login' | 'signup' | 'forgot';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -88,7 +95,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>('login');
+  const [appConfig, setAppConfig] = useState<{ googleClientId: string | null; emailEnabled: boolean }>({
+    googleClientId: null,
+    emailEnabled: false,
+  });
+
+  useEffect(() => {
+    api.config().then((res) => {
+      if (res.ok) {
+        setAppConfig({ googleClientId: res.data.googleClientId || null, emailEnabled: !!res.data.emailEnabled });
+      }
+    });
+  }, []);
 
   useEffect(() => {
     try {
@@ -117,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [refreshUser]);
 
-  const openAuthModal = (mode: 'login' | 'signup' = 'login') => {
+  const openAuthModal = (mode: AuthModalMode = 'login') => {
     setAuthModalMode(mode);
     setAuthModalOpen(true);
   };
@@ -152,6 +171,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return res.ok ? { ok: true } : { ok: false, error: res.error };
   };
 
+  const loginWithGoogle = async (credential: string): Promise<AuthResult> => {
+    const res = await api.google(credential);
+    if (!res.ok) return { ok: false, error: res.error };
+    setUser(res.data.user);
+    closeAuthModal();
+    return { ok: true };
+  };
+
+  const requestPasswordReset = async (email: string): Promise<AuthResult> => {
+    const res = await api.forgotPassword(email.trim());
+    return res.ok ? { ok: true } : { ok: false, error: res.error };
+  };
+
+  const resetPassword = async (token: string, password: string): Promise<AuthResult> => {
+    const res = await api.resetPassword(token, password);
+    if (!res.ok) return { ok: false, error: res.error };
+    setUser(res.data.user);
+    return { ok: true };
+  };
+
   const hasActiveSubscription =
     !!user?.hasActiveSubscription &&
     (user.role === 'admin' || !user.planExpiryTimestamp || user.planExpiryTimestamp > Date.now());
@@ -173,6 +212,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         refreshUser,
         submitPayment,
+        loginWithGoogle,
+        requestPasswordReset,
+        resetPassword,
+        appConfig,
       }}
     >
       {children}

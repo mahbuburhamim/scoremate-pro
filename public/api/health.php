@@ -8,6 +8,8 @@ $result = [
     'php' => PHP_VERSION,
     'configured' => !empty($c['DB_NAME']) && !empty($c['DB_USER']),
     'adminConfigured' => count(admin_emails()) > 0,
+    'emailConfigured' => email_enabled(),
+    'googleConfigured' => google_client_id() !== '',
     'database' => false,
 ];
 if ($result['configured']) {

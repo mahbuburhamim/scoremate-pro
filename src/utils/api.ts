@@ -79,6 +79,10 @@ export const api = {
   signup: (name: string, email: string, password: string, phone?: string) =>
     post('/api/auth.php', { action: 'signup', name, email, password, phone }),
   logout: () => post('/api/auth.php', { action: 'logout' }),
+  config: () => request('/api/auth.php?action=config'),
+  forgotPassword: (email: string) => post('/api/auth.php', { action: 'forgot', email }),
+  resetPassword: (token: string, password: string) => post('/api/auth.php', { action: 'reset', token, password }),
+  google: (credential: string) => post('/api/auth.php', { action: 'google', credential }),
 
   getState: (sport: Sport, since = 0) =>
     request(`/api/state.php?sport=${sport}${since ? `&since=${since}` : ''}`),
@@ -99,6 +103,7 @@ export const api = {
       post('/api/admin.php', { action, paymentId, note }),
     grant: (email: string, planId: string) => post('/api/admin.php', { action: 'grant', email, planId }),
     revoke: (email: string) => post('/api/admin.php', { action: 'revoke', email }),
+    resetLink: (email: string) => post('/api/admin.php', { action: 'reset_link', email }),
   },
 };
 

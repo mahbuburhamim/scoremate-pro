@@ -18,6 +18,7 @@ import { OverlayPage } from './pages/OverlayPage';
 import { FootballOverlayPage } from './pages/FootballOverlayPage';
 import { FootballControllerPage } from './pages/FootballControllerPage';
 import { AdminPage } from './pages/AdminPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 const RootHomeRoute: React.FC = () => {
   const { hasActiveSubscription } = useAuth();
@@ -70,6 +71,9 @@ const AppLayout: React.FC = () => {
               </ProtectedRoute>
             }
           />
+
+          {/* Password reset link from email / admin */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Admin: payment approvals and users */}
           <Route path="/admin" element={<AdminPage />} />
