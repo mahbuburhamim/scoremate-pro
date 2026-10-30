@@ -28,3 +28,4 @@ START_CHAT_ANTIGRAVITY.command
 
 # Generated with secrets at build time
 public/api/_config.php
+public/api/.schema_v*
