@@ -67,7 +67,7 @@ function liveSyncPlugin(): Plugin {
         sseClients.delete(client);
       }
     }
-  }, 10000);
+  }, 10000).unref();
 
   const middleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     // 0. Handle CORS preflight
