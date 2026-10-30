@@ -24,7 +24,7 @@ import {
   isStaleMockMatch,
 } from '../utils/storage';
 import { useAuth } from './AuthContext';
-import { api, createThrottledSaver } from '../utils/api';
+import { api, createThrottledSaver, startPoller } from '../utils/api';
 
 interface AddBallArgs {
   runs: number;
@@ -289,27 +289,32 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     //    same account in step by polling. Guests stay local-only.
     let cancelled = false;
     let lastServerTs = 0;
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let stopPolling: (() => void) | null = null;
+    let first = true;
 
-    const pullFromServer = async (initial: boolean) => {
+    const pullFromServer = async (): Promise<boolean> => {
+      const initial = first;
       const res = await api.getState('cricket', initial ? 0 : lastServerTs);
-      if (cancelled || !res.ok || res.status === 204) return;
+      if (cancelled) return true;
+      if (!res.ok) return false;
+      first = false;
+      if (res.status === 204) return true;
       const payload = res.data;
       const serverData = payload?.data;
       if (payload?.updatedAt) lastServerTs = payload.updatedAt;
       if (serverData?.matches && Array.isArray(serverData.matches) && serverData.matches.length > 0) {
         // Don't overwrite the scorer's screen while they are actively tapping
-        if (!initial && Date.now() - lastLocalActionTimestampRef.current < 3000) return;
+        if (!initial && Date.now() - lastLocalActionTimestampRef.current < 3000) return true;
         applySyncMatches(serverData.matches, serverData.activeMatchId);
       } else if (initial && canSyncRef.current) {
         // First login on this account: upload what this browser has
         saverRef.current.save({ matches: matchesRef.current, activeMatchId: activeMatchIdRef.current });
       }
+      return true;
     };
 
     if (uid !== 'guest') {
-      pullFromServer(true);
-      pollInterval = setInterval(() => pullFromServer(false), 2000);
+      stopPolling = startPoller(pullFromServer, 2000, 30_000);
     }
 
     // 5. BroadcastChannel for same-browser instant zero-latency sync
@@ -359,7 +364,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       cancelled = true;
       channelRef.current?.close();
-      if (pollInterval) clearInterval(pollInterval);
+      if (stopPolling) stopPolling();
       window.removeEventListener('storage', handleStorage);
     };
   }, [currentUserId, applySyncMatches]);

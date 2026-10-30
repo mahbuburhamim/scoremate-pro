@@ -9,7 +9,7 @@ import {
 } from '../types/football';
 import { playGoalSound, playWhistleSound } from '../utils/soundEffects';
 import { useAuth } from './AuthContext';
-import { api, createThrottledSaver } from '../utils/api';
+import { api, createThrottledSaver, startPoller } from '../utils/api';
 
 const STORAGE_KEY = 'footscore_active_match';
 const SYNC_CHANNEL_NAME = 'footscore_live_sync';
@@ -301,22 +301,27 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Load this account's football state, then poll so other devices of the account stay in step
     let cancelled = false;
     let lastServerTs = 0;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-    const pull = async (initial: boolean) => {
+    let first = true;
+    let stopPolling: (() => void) | null = null;
+    const pull = async (): Promise<boolean> => {
+      const initial = first;
       const res = await api.getState('football', initial ? 0 : lastServerTs);
-      if (cancelled || !res.ok || res.status === 204) return;
+      if (cancelled) return true;
+      if (!res.ok) return false;
+      first = false;
+      if (res.status === 204) return true;
       if (res.data?.updatedAt) lastServerTs = res.data.updatedAt;
       const incoming = res.data?.data?.footballMatch;
       if (incoming) {
-        if (!initial && Date.now() - lastLocalActionRef.current < 3000) return;
+        if (!initial && Date.now() - lastLocalActionRef.current < 3000) return true;
         acceptMatch(incoming);
       } else if (initial && !isOverlay && canSyncRef.current) {
         sendNetworkSync(matchRef.current);
       }
+      return true;
     };
     if (!isOverlay && userId !== 'guest') {
-      pull(true);
-      pollTimer = setInterval(() => pull(false), 2000);
+      stopPolling = startPoller(pull, 2000, 30_000);
     }
 
     try {
@@ -349,7 +354,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     return () => {
       cancelled = true;
-      if (pollTimer) clearInterval(pollTimer);
+      if (stopPolling) stopPolling();
       window.removeEventListener('storage', handleStorage);
       syncChannelRef.current?.close();
     };

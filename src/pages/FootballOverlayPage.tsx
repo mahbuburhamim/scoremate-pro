@@ -4,7 +4,7 @@ import { useFootball } from '../context/FootballContext';
 import { FootballMatch } from '../types/football';
 import { FootballScoreboardGraphic } from '../components/football/FootballScoreboardGraphic';
 import confetti from 'canvas-confetti';
-import { api } from '../utils/api';
+import { api, startPoller } from '../utils/api';
 import { Eye, EyeOff, Monitor, Sparkles, Sliders, Volume2, VolumeX } from 'lucide-react';
 
 const SYNC_CHANNEL_NAME = 'footscore_live_sync';
@@ -90,27 +90,25 @@ export const FootballOverlayPage: React.FC = () => {
     // 1. With a key: poll the owner's data (works in OBS on any computer)
     let cancelled = false;
     let lastTs = 0;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let stopPolling: (() => void) | null = null;
     if (overlayKey) {
-      const poll = async () => {
+      const poll = async (): Promise<boolean> => {
         const res = await api.getOverlay(overlayKey, 'football', lastTs);
-        if (cancelled) return;
+        if (cancelled) return true;
         if (!res.ok) {
           setSyncStatus('polling');
           setOverlayError(res.data?.error === 'subscription_expired' ? 'expired' : res.status === 404 ? 'invalid' : '');
-          return;
+          return false;
         }
         setOverlayError('');
-        if (res.status === 204) {
-          setSyncStatus('connected');
-          return;
-        }
+        setSyncStatus('connected');
+        if (res.status === 204) return true;
         if (res.data?.updatedAt) lastTs = res.data.updatedAt;
         const fm = res.data?.data?.footballMatch;
         if (fm) handleIncomingMatch(fm);
+        return true;
       };
-      poll();
-      pollTimer = setInterval(poll, 400);
+      stopPolling = startPoller(poll, 500);
     }
 
     // 3. BroadcastChannel for same-device cross-tab sync
@@ -141,7 +139,7 @@ export const FootballOverlayPage: React.FC = () => {
 
     return () => {
       cancelled = true;
-      if (pollTimer) clearInterval(pollTimer);
+      if (stopPolling) stopPolling();
       channel?.close();
       window.removeEventListener('storage', handleStorage);
     };

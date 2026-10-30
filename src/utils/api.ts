@@ -7,11 +7,17 @@ export interface ApiResult<T = any> {
   error?: string;
 }
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
 async function request<T = any>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
+  // A slow server must never leave requests hanging: they pile up and block the whole site
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(path, {
       credentials: 'same-origin',
       cache: 'no-store',
+      signal: controller.signal,
       ...init,
       headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...(init?.headers || {}) },
     });
@@ -28,7 +34,38 @@ async function request<T = any>(path: string, init?: RequestInit): Promise<ApiRe
     return { ok: true, status: res.status, data: json };
   } catch {
     return { ok: false, status: 0, error: 'ইন্টারনেট সংযোগ নেই বা সার্ভারে পৌঁছানো যাচ্ছে না (Network error)' };
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+/**
+ * Repeating poll that never overlaps (the next run waits for the previous one) and slows down
+ * while the server is failing, so a struggling server isn't hammered.
+ * `run` returns true on success, false on failure.
+ */
+export function startPoller(run: () => Promise<boolean>, intervalMs: number, maxBackoffMs = 15_000) {
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let failures = 0;
+  const tick = async () => {
+    if (stopped) return;
+    let ok = false;
+    try {
+      ok = await run();
+    } catch {
+      ok = false;
+    }
+    if (stopped) return;
+    failures = ok ? 0 : failures + 1;
+    const delay = failures === 0 ? intervalMs : Math.min(maxBackoffMs, intervalMs * 2 ** Math.min(failures, 6));
+    timer = setTimeout(tick, delay);
+  };
+  tick();
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
 }
 
 const post = <T = any>(path: string, body: unknown) =>

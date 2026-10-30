@@ -11,6 +11,9 @@ const SCHEMA_VERSION = 1;
 const SESSION_COOKIE = 'is_session';
 const SESSION_DAYS = 30;
 
+// A request must never hang: stuck PHP workers block the whole hosting account
+@set_time_limit(15);
+
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('X-Content-Type-Options: nosniff');
@@ -68,19 +71,30 @@ function db(): PDO {
         fail('Server is not configured', 503);
     }
     $host = $c['DB_HOST'] ?? 'localhost';
-    try {
-        $pdo = new PDO(
-            "mysql:host={$host};dbname={$c['DB_NAME']};charset=utf8mb4",
-            $c['DB_USER'],
-            $c['DB_PASS'] ?? '',
-            [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ]
-        );
-    } catch (Throwable $e) {
-        error_log('IconicScorer DB connect failed: ' . $e->getMessage());
+    // Try the configured host, then the other local form (socket vs TCP), each with a short timeout
+    $hosts = array_values(array_unique([$host, $host === 'localhost' ? '127.0.0.1' : 'localhost']));
+    $lastError = '';
+    foreach ($hosts as $h) {
+        try {
+            $pdo = new PDO(
+                "mysql:host={$h};dbname={$c['DB_NAME']};charset=utf8mb4",
+                $c['DB_USER'],
+                $c['DB_PASS'] ?? '',
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::ATTR_TIMEOUT => 4,
+                ]
+            );
+            break;
+        } catch (Throwable $e) {
+            $pdo = null;
+            $lastError = $e->getMessage();
+        }
+    }
+    if (!$pdo) {
+        error_log('IconicScorer DB connect failed: ' . $lastError);
         fail('Database unavailable', 503);
     }
     migrate($pdo);

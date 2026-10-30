@@ -19,5 +19,6 @@ if ($result['configured']) {
     } catch (Throwable $e) {
         $result['ok'] = false;
     }
+    $result['ms'] = (int) round((microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) * 1000);
 }
 out($result);

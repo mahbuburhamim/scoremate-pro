@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useCricket } from '../context/CricketContext';
 import { OverlayTheme } from '../types/cricket';
 import { isStaleMockMatch, createFreshInitialMatch } from '../utils/storage';
-import { api } from '../utils/api';
+import { api, startPoller } from '../utils/api';
 import { CricPicTheme } from '../components/overlay/CricPicTheme';
 import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
@@ -78,31 +78,29 @@ export const OverlayPage: React.FC = () => {
     if (!overlayKey) return;
     let cancelled = false;
     let lastTs = 0;
-    const poll = async () => {
+    const poll = async (): Promise<boolean> => {
       const res = await api.getOverlay(overlayKey, 'cricket', lastTs);
-      if (cancelled) return;
+      if (cancelled) return true;
       if (!res.ok) {
         setSyncStatus('disconnected');
         setOverlayError(res.data?.error === 'subscription_expired' ? 'expired' : res.status === 404 ? 'invalid' : '');
-        return;
+        return false;
       }
       setOverlayError('');
-      if (res.status === 204) {
-        setSyncStatus('connected');
-        return;
-      }
+      setSyncStatus('connected');
+      if (res.status === 204) return true;
       if (res.data?.updatedAt) lastTs = res.data.updatedAt;
       const d = res.data?.data;
       if (d?.matches && Array.isArray(d.matches)) {
         resolveAndSet(d.matches, d.activeMatchId);
       }
+      return true;
     };
-    poll();
-    const pollTimer = setInterval(poll, 400);
+    const stop = startPoller(poll, 500);
 
     return () => {
       cancelled = true;
-      clearInterval(pollTimer);
+      stop();
     };
   }, [matchId, resolveAndSet, overlayKey]);
 
