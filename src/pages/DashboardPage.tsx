@@ -26,6 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
+import { OversInput } from '../components/OversInput';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -459,17 +460,7 @@ export const DashboardPage: React.FC = () => {
                   <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
                     Overs Limit
                   </label>
-                  <select
-                    value={matchOvers}
-                    onChange={(e) => setMatchOvers(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
-                  >
-                    <option value={5}>5 Overs</option>
-                    <option value={10}>10 Overs</option>
-                    <option value={15}>15 Overs</option>
-                    <option value={20}>20 Overs (T20)</option>
-                    <option value={50}>50 Overs (ODI)</option>
-                  </select>
+                  <OversInput value={matchOvers} onChange={setMatchOvers} />
                 </div>
 
                 <div>

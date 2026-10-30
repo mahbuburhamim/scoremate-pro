@@ -25,6 +25,7 @@ import { SubscriptionCountdown } from '../components/SubscriptionCountdown';
 import { Player, DisplayMode, UmpireDecision, AnimationTrigger } from '../types/cricket';
 import { calculateStorageUsage } from '../utils/storage';
 import { ImageCropperModal } from '../components/ImageCropperModal';
+import { OversInput } from '../components/OversInput';
 
 export const ControllerPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
@@ -207,6 +208,24 @@ export const ControllerPage: React.FC = () => {
   const nonStriker = battingTeam.players.find((p) => p.id === activeInning.currentNonStrikerId);
   const bowler = bowlingTeam.players.find((p) => p.id === activeInning.currentBowlerId);
 
+  // Over-complete detection: after every 6th legal ball the previous over's bowler
+  // may not bowl the next over, so scoring is blocked until a new bowler is picked.
+  // Derived from ball data (not stored state) so it survives refresh and undo.
+  const lastLegalBall = [...activeInning.allBalls]
+    .reverse()
+    .find((b) => b.extraType !== 'wide' && b.extraType !== 'noBall');
+  const overJustCompleted = activeInning.legalBalls > 0 && activeInning.legalBalls % 6 === 0;
+  const lastOverBowlerId = overJustCompleted ? lastLegalBall?.bowlerId : undefined;
+  const needsNewBowler =
+    !!lastOverBowlerId &&
+    lastOverBowlerId === activeInning.currentBowlerId &&
+    !activeInning.isCompleted &&
+    activeInning.legalBalls < currentMatch.overs * 6;
+
+  useEffect(() => {
+    if (needsNewBowler) setShowBowlerModal(true);
+  }, [needsNewBowler, activeInning.legalBalls]);
+
   // Run rate calculation
   const oversDecimal = activeInning.legalBalls / 6;
   const currentRunRate = oversDecimal > 0 ? (activeInning.totalRuns / oversDecimal).toFixed(2) : '0.00';
@@ -225,6 +244,10 @@ export const ControllerPage: React.FC = () => {
 
   // Handle run click
   const handleScoreRun = (runs: number) => {
+    if (needsNewBowler) {
+      setShowBowlerModal(true);
+      return;
+    }
     if (isWicket) {
       setPendingWicketRuns(runs);
       setOutPlayerId(activeInning.currentStrikerId);
@@ -250,6 +273,11 @@ export const ControllerPage: React.FC = () => {
 
   // Confirm Wicket
   const handleConfirmWicket = () => {
+    if (needsNewBowler) {
+      setShowWicketModal(false);
+      setShowBowlerModal(true);
+      return;
+    }
     addBall({
       runs: pendingWicketRuns,
       isWide,
@@ -1178,31 +1206,47 @@ export const ControllerPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-heading font-black text-lg text-cyan-400 uppercase">Select Bowler</h3>
+              <h3 className="font-heading font-black text-lg text-cyan-400 uppercase">
+                {needsNewBowler ? `Over ${activeInning.legalBalls / 6} Complete — Next Bowler` : 'Select Bowler'}
+              </h3>
               <button onClick={() => setShowBowlerModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
+            {needsNewBowler && (
+              <p className="text-[11px] text-amber-300 font-bold -mt-2">
+                পরের over কে করবে select করুন। Bowler select না করা পর্যন্ত scoring বন্ধ থাকবে।
+              </p>
+            )}
             <div className="space-y-1.5 max-h-60 overflow-y-auto">
-              {bowlingTeam.players.map((p) => (
+              {bowlingTeam.players.map((p) => {
+                const bowledLastOver = needsNewBowler && p.id === lastOverBowlerId;
+                return (
                 <button
                   key={p.id}
+                  disabled={bowledLastOver}
                   onClick={() => {
                     changeBowler(p.id);
                     setShowBowlerModal(false);
                   }}
                   className={`w-full text-left p-2.5 rounded-xl text-xs font-bold transition flex items-center justify-between ${
-                    p.id === activeInning.currentBowlerId
+                    bowledLastOver
+                      ? 'bg-slate-800/40 text-slate-500 cursor-not-allowed'
+                      : p.id === activeInning.currentBowlerId
                       ? 'bg-cyan-500 text-slate-950'
                       : 'bg-slate-800 hover:bg-slate-700 text-white'
                   }`}
                 >
-                  <span>{p.name}</span>
+                  <span>
+                    {p.name}
+                    {bowledLastOver && <span className="ml-1.5 text-[10px] font-normal">(last over)</span>}
+                  </span>
                   <span className="font-mono text-[11px] opacity-80">
                     {p.runsConceded}-{p.wickets} ({p.oversBowled})
                   </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1827,18 +1871,7 @@ export const ControllerPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="font-bold text-slate-300 block mb-1">Overs Per Inning</label>
-                  <select
-                    value={newOvers}
-                    onChange={(e) => setNewOvers(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 focus:border-cyan-400 rounded-xl px-3 py-2 text-white font-bold focus:outline-none cursor-pointer"
-                  >
-                    <option value={5}>5 Overs</option>
-                    <option value={10}>10 Overs (T10)</option>
-                    <option value={12}>12 Overs</option>
-                    <option value={15}>15 Overs</option>
-                    <option value={20}>20 Overs (T20)</option>
-                    <option value={50}>50 Overs (ODI)</option>
-                  </select>
+                  <OversInput value={newOvers} onChange={setNewOvers} variant="dark" />
                 </div>
               </div>
 
