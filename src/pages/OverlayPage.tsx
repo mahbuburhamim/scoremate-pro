@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useCricket } from '../context/CricketContext';
 import { OverlayTheme } from '../types/cricket';
 import { isStaleMockMatch, createFreshInitialMatch } from '../utils/storage';
+import { api } from '../utils/api';
 import { CricPicTheme } from '../components/overlay/CricPicTheme';
 import { AsiaCupTheme } from '../components/overlay/AsiaCupTheme';
 import { CWC23Theme } from '../components/overlay/CWC23Theme';
@@ -17,9 +18,12 @@ import { Eye, EyeOff, Palette, Monitor } from 'lucide-react';
 export const OverlayPage: React.FC = () => {
   const { matchId } = useParams<{ matchId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { matches, activeMatch, clearAnimation, applySyncMatches } = useCricket();
+  const { matches, activeMatch, clearAnimation } = useCricket();
 
   const themeParam = (searchParams.get('theme') as OverlayTheme) || 'cricpic';
+  // Secret per-account key: the overlay shows only that account's matches
+  const overlayKey = searchParams.get('key') || '';
+  const [overlayError, setOverlayError] = useState<string>('');
   const transparentParam = searchParams.get('transparent') !== 'false';
 
   // Toggle stadium background for browser testing
@@ -58,71 +62,56 @@ export const OverlayPage: React.FC = () => {
         });
         setSyncStatus('connected');
       }
-      // Keep entire CricketContext updated
-      if (applySyncMatches && Array.isArray(list) && list.length > 0) {
-        applySyncMatches(list, activeId);
-      }
     },
-    [matchId, applySyncMatches]
+    [matchId]
   );
 
   useEffect(() => {
-    // 1. Initial resolution from matches context if clean
-    if (matches && matches.length > 0) {
+    // 1. No key (same-browser preview): use this browser's own matches.
+    //    With a key the overlay must never show local data, only the key owner's.
+    if (!overlayKey && matches && matches.length > 0) {
       resolveAndSet(matches);
     }
 
-    // 2. Direct Local SSE (/api/events) - instant zero-latency push for OBS Studio CEF
-    let localSse: EventSource | null = null;
-    try {
-      localSse = new EventSource('/api/events');
-      localSse.onmessage = (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          if (parsed?.matches && Array.isArray(parsed.matches)) {
-            resolveAndSet(parsed.matches, parsed.activeMatchId);
-          }
-        } catch {}
-      };
-      localSse.onopen = () => setSyncStatus('connected');
-    } catch {}
-
-    // 3. Fast polling: checks /api/match first, falls back directly to Hostinger's /api/sync.php
-    const pollTimer = setInterval(() => {
-      fetch(`/api/match?matchId=${matchId || ''}&_t=${Date.now()}`, { cache: 'no-store' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.targetMatch || (data?.matches && Array.isArray(data.matches))) {
-            resolveAndSet(data.matches || [], data.activeMatchId, data.targetMatch);
-          } else {
-            throw new Error('Try sync.php fallback');
-          }
-        })
-        .catch(() => {
-          // Direct fallback to Hostinger Apache PHP handler
-          fetch(`/api/sync.php?matchId=${matchId || ''}&_t=${Date.now()}`, { cache: 'no-store' })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data) => {
-              if (data?.targetMatch || (data?.matches && Array.isArray(data.matches))) {
-                resolveAndSet(data.matches || [], data.activeMatchId, data.targetMatch);
-              }
-            })
-            .catch(() => {});
-        });
-    }, 250);
+    // 2. With a key: poll the owner's data (works in OBS on any computer).
+    //    Without a key: same-browser preview from the logged-in context only.
+    if (!overlayKey) return;
+    let cancelled = false;
+    let lastTs = 0;
+    const poll = async () => {
+      const res = await api.getOverlay(overlayKey, 'cricket', lastTs);
+      if (cancelled) return;
+      if (!res.ok) {
+        setSyncStatus('disconnected');
+        setOverlayError(res.data?.error === 'subscription_expired' ? 'expired' : res.status === 404 ? 'invalid' : '');
+        return;
+      }
+      setOverlayError('');
+      if (res.status === 204) {
+        setSyncStatus('connected');
+        return;
+      }
+      if (res.data?.updatedAt) lastTs = res.data.updatedAt;
+      const d = res.data?.data;
+      if (d?.matches && Array.isArray(d.matches)) {
+        resolveAndSet(d.matches, d.activeMatchId);
+      }
+    };
+    poll();
+    const pollTimer = setInterval(poll, 400);
 
     return () => {
-      localSse?.close();
+      cancelled = true;
       clearInterval(pollTimer);
     };
-  }, [matchId, resolveAndSet]);
+  }, [matchId, resolveAndSet, overlayKey]);
 
   // CRITICAL FIX FOR OBS: Direct live match takes precedence over stale context matches!
   const contextMatch = (matchId && matchId !== 'active')
     ? matches.find((m) => m.id === matchId)
     : activeMatch;
 
-  const match = (() => {
+  const contextOrFallbackMatch = (() => {
     if (directMatch && !isStaleMockMatch(directMatch)) {
       if (!matchId || matchId === 'active' || directMatch.id === matchId) {
         const directTime = directMatch.updatedAt || 0;
@@ -143,6 +132,21 @@ export const OverlayPage: React.FC = () => {
     }
     return createFreshInitialMatch();
   })();
+
+  // Keyed overlay (OBS): show only the owner's data, and nothing at all until it arrives,
+  // so the stream never flashes a placeholder scoreboard.
+  const keyedMatch = directMatch && !isStaleMockMatch(directMatch) ? directMatch : null;
+  const showScoreboard = !overlayKey || !!keyedMatch;
+  const match = overlayKey ? keyedMatch || contextOrFallbackMatch : contextOrFallbackMatch;
+
+  // Animations in keyed mode are dismissed locally; the overlay never writes data back
+  const [dismissedAnimId, setDismissedAnimId] = useState<string | null>(null);
+  const visibleAnimation =
+    overlayKey && match.activeAnimation?.id === dismissedAnimId ? null : match.activeAnimation;
+  const handleAnimationDone = () => {
+    if (overlayKey) setDismissedAnimId(match.activeAnimation?.id || null);
+    else clearAnimation();
+  };
 
   // Set body background to transparent if transparentParam is true
   useEffect(() => {
@@ -283,21 +287,34 @@ export const OverlayPage: React.FC = () => {
         </>
       )}
 
-      {/* Full-Screen & Pop-up Graphics */}
-      <BroadcastCards match={match} />
+      {/* Keyed link problems are shown only in a normal browser, never on stream */}
+      {overlayKey && overlayError && !isObs && (
+        <div className="fixed top-16 right-3 z-50 max-w-xs p-3 rounded-xl bg-red-950/90 border border-red-700 text-red-100 text-xs font-bold">
+          {overlayError === 'expired'
+            ? 'এই overlay link এর account এর subscription শেষ হয়ে গেছে।'
+            : 'Overlay link টি সঠিক নয়। Links পেজ থেকে নতুন link কপি করুন।'}
+        </div>
+      )}
 
-      {/* Animated Event Ribbons (FOUR, SIX, WICKET, FREE HIT) */}
-      <EventRibbon animation={match.activeAnimation} onComplete={clearAnimation} />
+      {showScoreboard && (
+        <>
+          {/* Full-Screen & Pop-up Graphics */}
+          <BroadcastCards match={match} />
 
-      {/* Spacer to push lower-third to bottom */}
-      <div className="flex-1" />
+          {/* Animated Event Ribbons (FOUR, SIX, WICKET, FREE HIT) */}
+          <EventRibbon animation={visibleAnimation} onComplete={handleAnimationDone} />
 
-      {/* Main Lower-Third Broadcast Strip (Auto Responsive Scaling on Mobile & Desktop) */}
-      <div className="w-full pb-4 sm:pb-8 z-20 flex justify-center items-end overflow-hidden">
-        <ResponsiveScoreboardWrapper designWidth={1340}>
-          {renderTheme()}
-        </ResponsiveScoreboardWrapper>
-      </div>
+          {/* Spacer to push lower-third to bottom */}
+          <div className="flex-1" />
+
+          {/* Main Lower-Third Broadcast Strip (Auto Responsive Scaling on Mobile & Desktop) */}
+          <div className="w-full pb-4 sm:pb-8 z-20 flex justify-center items-end overflow-hidden">
+            <ResponsiveScoreboardWrapper designWidth={1340}>
+              {renderTheme()}
+            </ResponsiveScoreboardWrapper>
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -34,7 +34,8 @@ interface ThemeRow {
 
 export const LinksPage: React.FC = () => {
   const { matches, activeMatch, setActiveMatchId } = useCricket();
-  const { hasActiveSubscription } = useAuth();
+  const { hasActiveSubscription, user } = useAuth();
+  const keyParam = user?.overlayKey ? `key=${user.overlayKey}` : '';
   const [selectedMatchId, setSelectedMatchId] = useState<string>(activeMatch.id);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<OverlayTheme>('cricpic');
@@ -101,7 +102,7 @@ export const LinksPage: React.FC = () => {
   const getOverlayUrl = (theme: OverlayTheme, cameraFi = false) => {
     const origin = window.location.origin;
     const targetId = selectedMatchId === 'active' ? 'active' : currentMatch.id;
-    const base = `${origin}/overlay/${targetId}?theme=${theme}&transparent=true`;
+    const base = `${origin}/overlay/${targetId}?theme=${theme}&transparent=true${keyParam ? `&${keyParam}` : ''}`;
     return cameraFi ? `${base}&camerafi=1` : base;
   };
 
@@ -172,7 +173,7 @@ export const LinksPage: React.FC = () => {
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <button
-                onClick={() => handleCopy(`${window.location.origin}/overlay/football`, 'football_overlay')}
+                onClick={() => handleCopy(`${window.location.origin}/overlay/football${keyParam ? `?${keyParam}` : ''}`, 'football_overlay')}
                 className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 transition active:scale-95"
               >
                 {copiedKey === 'football_overlay' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -187,7 +188,7 @@ export const LinksPage: React.FC = () => {
               </Link>
 
               <a
-                href="/overlay/football"
+                href={`/overlay/football${keyParam ? `?${keyParam}` : ''}`}
                 target="_blank"
                 rel="noreferrer"
                 className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"

@@ -24,6 +24,7 @@ import {
   isStaleMockMatch,
 } from '../utils/storage';
 import { useAuth } from './AuthContext';
+import { api, createThrottledSaver } from '../utils/api';
 
 interface AddBallArgs {
   runs: number;
@@ -95,8 +96,12 @@ const isValidMatch = (m: any): m is Match => {
 };
 
 export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, hasActiveSubscription } = useAuth();
   const currentUserId = user?.id || 'guest';
+  // Only a logged-in, paid account may write to the server (the server enforces this too)
+  const canSyncRef = useRef<boolean>(false);
+  canSyncRef.current = !!user && hasActiveSubscription;
+  const saverRef = useRef(createThrottledSaver('cricket', 300));
   const currentUserIdRef = useRef<string>(currentUserId);
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
@@ -127,6 +132,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return sanitized[0]?.id || (list[0]?.id || defaultInitialMatch.id);
   });
 
+  const matchesRef = useRef<Match[]>(matches);
+  matchesRef.current = matches;
+
   const [undoStack, setUndoStack] = useState<Match[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
@@ -145,6 +153,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Account switch effect: when user logs in, signs up, or logs out, reload their isolated matches & tournaments
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
+    // Never let a previous account's unsent changes land in the new account
+    saverRef.current.cancel();
+    saverRef.current = createThrottledSaver('cricket', 300);
     const loadedTournaments = getStoredTournaments(currentUserId);
     const loadedMatches = getStoredMatches(currentUserId);
     const storedActive = getStoredActiveMatchId(currentUserId);
@@ -199,27 +210,10 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      const syncPayload = JSON.stringify({
-        type: 'MATCHES_SYNC',
-        userId: uid,
-        matches: validMatches,
-        activeMatchId: currentActiveId,
-        timestamp: Date.now(),
-      });
-
-      // 2. Server API for OBS Studio (CEF) - works on both Vite (/api/match) and Hostinger Apache (/api/sync.php)
-      try {
-        fetch('/api/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: syncPayload,
-        }).catch(() => {});
-        fetch('/api/sync.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: syncPayload,
-        }).catch(() => {});
-      } catch {}
+      // 2. Account server (powers OBS overlays and other devices of this account)
+      if (canSyncRef.current) {
+        saverRef.current.save({ matches: validMatches, activeMatchId: currentActiveId });
+      }
     },
     [sanitizeMatches]
   );
@@ -245,26 +239,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      const changePayload = JSON.stringify({
-        type: 'ACTIVE_MATCH_CHANGE',
-        userId: uid,
-        activeMatchId: id,
-        timestamp: Date.now(),
-      });
-
-      // Server API
-      try {
-        fetch('/api/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: changePayload,
-        }).catch(() => {});
-        fetch('/api/sync.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: changePayload,
-        }).catch(() => {});
-      } catch {}
+      if (canSyncRef.current) {
+        saverRef.current.save({ matches: matchesRef.current, activeMatchId: id });
+      }
     },
     []
   );
@@ -308,107 +285,32 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const uid = currentUserId;
 
-    // 1. Initial state fetch from local server for current user (guaranteed cache-busted)
-    fetch(`/api/match?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-          if (!data.userId || data.userId === uid) {
-            applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
-          }
-        } else {
-          // Push initial local matches to server if server is empty for this user
-          const localMatches = getStoredMatches(uid);
-          const storedActive = getStoredActiveMatchId(uid);
-          if (localMatches && localMatches.length > 0) {
-            fetch('/api/match', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: uid,
-                matches: localMatches,
-                activeMatchId: storedActive || localMatches[0]?.id,
-                timestamp: Date.now(),
-              }),
-            }).catch(() => {});
-          }
-        }
-      })
-      .catch(() => {});
+    // 1. Load this account's saved state from the server, then keep other devices of the
+    //    same account in step by polling. Guests stay local-only.
+    let cancelled = false;
+    let lastServerTs = 0;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
-    // 2. Local Server-Sent Events (SSE) listener (zero-latency instant push)
-    let localEventSource: EventSource | null = null;
-    try {
-      localEventSource = new EventSource('/api/events');
-      localEventSource.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          if (parsed?.type === 'MATCHES_SYNC' && Array.isArray(parsed.matches)) {
-            if (!parsed.userId || parsed.userId === uid) {
-              applySyncMatches(parsed.matches, parsed.activeMatchId, parsed.timestamp);
-            }
-          }
-        } catch {}
-      };
-    } catch (e) {
-      console.warn('Local SSE not available', e);
+    const pullFromServer = async (initial: boolean) => {
+      const res = await api.getState('cricket', initial ? 0 : lastServerTs);
+      if (cancelled || !res.ok || res.status === 204) return;
+      const payload = res.data;
+      const serverData = payload?.data;
+      if (payload?.updatedAt) lastServerTs = payload.updatedAt;
+      if (serverData?.matches && Array.isArray(serverData.matches) && serverData.matches.length > 0) {
+        // Don't overwrite the scorer's screen while they are actively tapping
+        if (!initial && Date.now() - lastLocalActionTimestampRef.current < 3000) return;
+        applySyncMatches(serverData.matches, serverData.activeMatchId);
+      } else if (initial && canSyncRef.current) {
+        // First login on this account: upload what this browser has
+        saverRef.current.save({ matches: matchesRef.current, activeMatchId: activeMatchIdRef.current });
+      }
+    };
+
+    if (uid !== 'guest') {
+      pullFromServer(true);
+      pollInterval = setInterval(() => pullFromServer(false), 2000);
     }
-
-    // 3. Cloud SSE listener (ntfy.sh) for OBS Studio & production deployments
-    let cloudEventSource: EventSource | null = null;
-    try {
-      cloudEventSource = new EventSource(`https://ntfy.sh/scoremate_${uid}_sync_v1/sse`);
-      cloudEventSource.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          const payload = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed;
-          if (payload?.type === 'MATCHES_SYNC' && Array.isArray(payload.matches)) {
-            if (!payload.userId || payload.userId === uid) {
-              applySyncMatches(payload.matches, payload.activeMatchId, payload.timestamp);
-            }
-          } else if (payload?.type === 'ACTIVE_MATCH_CHANGE' && payload.activeMatchId) {
-            if (!payload.userId || payload.userId === uid) {
-              if (!payload.timestamp || payload.timestamp >= lastLocalActionTimestampRef.current) {
-                setActiveMatchIdState(payload.activeMatchId);
-                saveActiveMatchId(payload.activeMatchId, uid);
-                activeMatchIdRef.current = payload.activeMatchId;
-              }
-            }
-          }
-        } catch {}
-      };
-    } catch (e) {
-      console.warn('Cloud SSE not available', e);
-    }
-
-    // 4. Ultra-reliable polling fallback (checks /api/match first, falls back to /api/sync.php)
-    const pollInterval = setInterval(() => {
-      fetch(`/api/match?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
-        .then((r) => {
-          if (!r.ok) throw new Error('Local API unavailable');
-          return r.json();
-        })
-        .then((data) => {
-          if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-            if (!data.userId || data.userId === uid || uid === 'guest') {
-              applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
-            }
-          }
-        })
-        .catch(() => {
-          // Fallback to /api/sync.php (Hostinger Apache)
-          fetch(`/api/sync.php?userId=${uid}&_t=${Date.now()}`, { cache: 'no-store' })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data) => {
-              if (data?.matches && Array.isArray(data.matches) && data.matches.length > 0) {
-                if (!data.userId || data.userId === uid || uid === 'guest') {
-                  applySyncMatches(data.matches, data.activeMatchId, data.timestamp);
-                }
-              }
-            })
-            .catch(() => {});
-        });
-    }, 250);
 
     // 5. BroadcastChannel for same-browser instant zero-latency sync
     try {
@@ -455,10 +357,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
     window.addEventListener('storage', handleStorage);
 
     return () => {
+      cancelled = true;
       channelRef.current?.close();
-      localEventSource?.close();
-      cloudEventSource?.close();
-      clearInterval(pollInterval);
+      if (pollInterval) clearInterval(pollInterval);
       window.removeEventListener('storage', handleStorage);
     };
   }, [currentUserId, applySyncMatches]);
@@ -1261,15 +1162,7 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
       saveActiveMatchId(nextActiveId, uid);
       activeMatchIdRef.current = nextActiveId;
 
-      // Broadcast updated matches to OBS and all clients
-      const syncPayload = JSON.stringify({
-        type: 'MATCHES_SYNC',
-        userId: uid,
-        matches: finalMatches,
-        activeMatchId: nextActiveId,
-        timestamp: Date.now(),
-      });
-
+      // Broadcast updated matches to other tabs and the account server
       if (channelRef.current) {
         try {
           channelRef.current.postMessage({
@@ -1281,22 +1174,9 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         } catch {}
       }
-
-      try {
-        fetch('/api/match', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: syncPayload,
-        }).catch(() => {});
-      } catch {}
-
-      try {
-        fetch(`https://ntfy.sh/scoremate_${uid}_sync_v1`, {
-          method: 'POST',
-          headers: { 'Title': 'MATCH_DELETED' },
-          body: syncPayload,
-        }).catch(() => {});
-      } catch {}
+      if (canSyncRef.current) {
+        saverRef.current.save({ matches: finalMatches, activeMatchId: nextActiveId });
+      }
 
       return nextActiveId;
     },
@@ -1317,14 +1197,8 @@ export const CricketProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.warn('Manual sync pulse error', err);
       }
     }
-    try {
-      fetch('/api/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ matches }),
-      }).catch(() => {});
-    } catch {
-      // ignore
+    if (canSyncRef.current) {
+      saverRef.current.save({ matches, activeMatchId: activeMatchIdRef.current });
     }
   }, [matches]);
 

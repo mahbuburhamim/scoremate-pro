@@ -2,12 +2,19 @@
   RewriteEngine On
   RewriteBase /
 
-  # Forward /api/match and /api/events directly to /api/sync.php for OBS Studio real-time sync
-  RewriteRule ^api/match(.*)$ /api/sync.php [L,QSA]
-  RewriteRule ^api/events(.*)$ /api/sync.php [L,QSA]
+  # API internals (config, library, schema flags) are never served directly
+  RewriteRule ^api/(_|\.) - [F,L]
+
+  # Unknown /api/* paths return 404 instead of the SPA
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^api/ - [R=404,L]
 
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
 </IfModule>
+
+<FilesMatch "^(_|\.)">
+  Require all denied
+</FilesMatch>

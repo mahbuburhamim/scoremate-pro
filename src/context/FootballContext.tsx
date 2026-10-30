@@ -8,6 +8,8 @@ import {
   PenaltyShootoutState,
 } from '../types/football';
 import { playGoalSound, playWhistleSound } from '../utils/soundEffects';
+import { useAuth } from './AuthContext';
+import { api, createThrottledSaver } from '../utils/api';
 
 const STORAGE_KEY = 'footscore_active_match';
 const SYNC_CHANNEL_NAME = 'footscore_live_sync';
@@ -205,6 +207,12 @@ interface FootballContextType {
 const FootballContext = createContext<FootballContextType | undefined>(undefined);
 
 export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, hasActiveSubscription } = useAuth();
+  const userId = user?.id || 'guest';
+  const canSyncRef = useRef<boolean>(false);
+  canSyncRef.current = !!user && hasActiveSubscription;
+  const saverRef = useRef(createThrottledSaver('football', 300));
+  const lastLocalActionRef = useRef<number>(0);
   const [match, setMatchState] = useState<FootballMatch>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -233,26 +241,11 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const isOverlay = typeof window !== 'undefined' && window.location.pathname.includes('/overlay');
 
-  // Send network sync to /api/match and Hostinger /api/sync.php
+  // Push to this account's server state (powers the OBS overlay link and other devices)
   const sendNetworkSync = useCallback((targetMatch: FootballMatch) => {
-    if (isOverlay) return; // Overlays are pure consumers; never overwrite server state!
-    try {
-      const payload = JSON.stringify({
-        footballMatch: targetMatch,
-        timestamp: Date.now(),
-      });
-      fetch('/api/match', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payload,
-      }).catch(() => {
-        fetch('/api/sync.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload,
-        }).catch(() => {});
-      });
-    } catch {}
+    if (isOverlay || !canSyncRef.current) return; // Overlays are pure consumers
+    lastLocalActionRef.current = Date.now();
+    saverRef.current.save({ footballMatch: targetMatch });
   }, [isOverlay]);
 
   // Broadcast and persist helper
@@ -271,7 +264,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } catch {}
       }
 
-      // Relay to server (Node/Vite or Hostinger Apache sync.php)
+      // Relay to this account's server state
       if (!isOverlay) {
         sendNetworkSync(newMatch);
       }
@@ -293,7 +286,7 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Setup BroadcastChannel, network polling fallback and storage event listeners
   useEffect(() => {
-    // 0. Initial resolution from /api/match and /api/sync.php
+    // Accept only newer match state
     const acceptMatch = (incoming: FootballMatch) => {
       if (
         incoming &&
@@ -305,34 +298,25 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    const fetchInitial = () => {
-      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.footballMatch) {
-            acceptMatch(data.footballMatch);
-          } else if (!isOverlay) {
-            sendNetworkSync(matchRef.current);
-          }
-        })
-        .catch(() => {
-          fetch(`/api/sync.php?_t=${Date.now()}`, { cache: 'no-store' })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data) => {
-              if (data?.footballMatch) {
-                acceptMatch(data.footballMatch);
-              } else if (!isOverlay) {
-                sendNetworkSync(matchRef.current);
-              }
-            })
-            .catch(() => {});
-        });
+    // Load this account's football state, then poll so other devices of the account stay in step
+    let cancelled = false;
+    let lastServerTs = 0;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    const pull = async (initial: boolean) => {
+      const res = await api.getState('football', initial ? 0 : lastServerTs);
+      if (cancelled || !res.ok || res.status === 204) return;
+      if (res.data?.updatedAt) lastServerTs = res.data.updatedAt;
+      const incoming = res.data?.data?.footballMatch;
+      if (incoming) {
+        if (!initial && Date.now() - lastLocalActionRef.current < 3000) return;
+        acceptMatch(incoming);
+      } else if (initial && !isOverlay && canSyncRef.current) {
+        sendNetworkSync(matchRef.current);
+      }
     };
-    fetchInitial();
-
-    // If controller, push initial state to server so OBS always has it ready
-    if (!isOverlay) {
-      sendNetworkSync(matchRef.current);
+    if (!isOverlay && userId !== 'guest') {
+      pull(true);
+      pollTimer = setInterval(() => pull(false), 2000);
     }
 
     try {
@@ -364,10 +348,18 @@ export const FootballProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     window.addEventListener('storage', handleStorage);
 
     return () => {
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
       window.removeEventListener('storage', handleStorage);
       syncChannelRef.current?.close();
     };
-  }, [isOverlay, sendNetworkSync]);
+  }, [isOverlay, sendNetworkSync, userId]);
+
+  // Account switch: drop the previous account's unsent changes
+  useEffect(() => {
+    saverRef.current.cancel();
+    saverRef.current = createThrottledSaver('football', 300);
+  }, [userId]);
 
   // Live Timer Ticker: Only the active runner controller tab advances the master clock
   useEffect(() => {

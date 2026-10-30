@@ -136,7 +136,7 @@ export const DashboardPage: React.FC = () => {
           </Link>
 
           <a
-            href={`/overlay/${activeMatch.id}?theme=cricpic`}
+            href={`/overlay/${activeMatch.id}?theme=cricpic${user?.overlayKey ? `&key=${user.overlayKey}` : ''}`}
             target="_blank"
             rel="noopener noreferrer"
             className="group p-5 rounded-3xl bg-white/90 border border-slate-200/80 hover:border-rose-400 hover:shadow-[0_15px_30px_rgba(244,63,94,0.1)] flex flex-col gap-3 shadow-sm transition active:scale-[0.98]"

@@ -23,11 +23,11 @@ import logoImg from '../assets/logo.png';
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const { activeMatch } = useCricket();
-  const { user, isAuthenticated, hasActiveSubscription, openAuthModal, logout } = useAuth();
+  const { user, isAuthenticated, hasActiveSubscription, openAuthModal, logout, isAdmin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setMobileMenuOpen(false);
     navigate('/');
   };
@@ -182,6 +182,15 @@ export const Navbar: React.FC = () => {
                   {user?.name?.split(' ')[0]}
                 </span>
               </div>
+
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className="px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100 transition"
+                >
+                  Admin
+                </NavLink>
+              )}
 
               {/* Logout Button */}
               <button
@@ -373,6 +382,16 @@ export const Navbar: React.FC = () => {
                 </button>
               </>
             ) : (
+              <>
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  onClick={closeMenu}
+                  className="w-full py-2.5 rounded-xl text-blue-700 hover:bg-blue-50 text-sm font-bold text-center transition"
+                >
+                  Admin Panel
+                </NavLink>
+              )}
               <button
                 onClick={handleLogout}
                 className="w-full py-2.5 rounded-xl text-red-600 hover:bg-red-50 text-sm font-bold flex items-center justify-center gap-2 transition"
@@ -380,6 +399,7 @@ export const Navbar: React.FC = () => {
                 <LogOut className="w-4 h-4" />
                 <span>Log Out</span>
               </button>
+              </>
             )}
           </div>
         </div>

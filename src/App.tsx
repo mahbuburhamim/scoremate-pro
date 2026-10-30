@@ -17,6 +17,7 @@ import { ControllerPage } from './pages/ControllerPage';
 import { OverlayPage } from './pages/OverlayPage';
 import { FootballOverlayPage } from './pages/FootballOverlayPage';
 import { FootballControllerPage } from './pages/FootballControllerPage';
+import { AdminPage } from './pages/AdminPage';
 
 const RootHomeRoute: React.FC = () => {
   const { hasActiveSubscription } = useAuth();
@@ -53,8 +54,25 @@ const AppLayout: React.FC = () => {
           <Route path="/contact" element={<ContactPage />} />
 
           {/* Football Match Scoreboard & Live Controller */}
-          <Route path="/football" element={<FootballControllerPage />} />
-          <Route path="/football/controller" element={<FootballControllerPage />} />
+          <Route
+            path="/football"
+            element={
+              <ProtectedRoute featureName="Football Live Controller">
+                <FootballControllerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/football/controller"
+            element={
+              <ProtectedRoute featureName="Football Live Controller">
+                <FootballControllerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin: payment approvals and users */}
+          <Route path="/admin" element={<AdminPage />} />
 
           {/* Protected Member Dashboard */}
           <Route

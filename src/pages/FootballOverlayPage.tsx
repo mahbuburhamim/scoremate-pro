@@ -4,6 +4,7 @@ import { useFootball } from '../context/FootballContext';
 import { FootballMatch } from '../types/football';
 import { FootballScoreboardGraphic } from '../components/football/FootballScoreboardGraphic';
 import confetti from 'canvas-confetti';
+import { api } from '../utils/api';
 import { Eye, EyeOff, Monitor, Sparkles, Sliders, Volume2, VolumeX } from 'lucide-react';
 
 const SYNC_CHANNEL_NAME = 'footscore_live_sync';
@@ -12,6 +13,9 @@ const STORAGE_KEY = 'footscore_active_match';
 export const FootballOverlayPage: React.FC = () => {
   const { match: contextMatch, clearAnimation, updateConfig, setMatch } = useFootball();
   const [searchParams] = useSearchParams();
+  // Secret per-account key: shows only that account's football match
+  const overlayKey = searchParams.get('key') || '';
+  const [overlayError, setOverlayError] = useState<string>('');
 
   // Direct live match state from SSE / API feeds (bypasses isolated CEF sandboxes)
   const [directMatch, setDirectMatch] = useState<FootballMatch | null>(null);
@@ -83,44 +87,31 @@ export const FootballOverlayPage: React.FC = () => {
   // ZERO-LATENCY OBS LIVE SYNCHRONIZATION ENGINE (SSE + 250ms POLLING + BROADCAST)
   // =========================================================================
   useEffect(() => {
-    // 1. Direct Local SSE (/api/events) - instant push for OBS Studio CEF
-    let sse: EventSource | null = null;
-    try {
-      sse = new EventSource('/api/events');
-      sse.onmessage = (e) => {
-        try {
-          const parsed = JSON.parse(e.data);
-          if (parsed?.footballMatch) {
-            handleIncomingMatch(parsed.footballMatch);
-          }
-        } catch {}
+    // 1. With a key: poll the owner's data (works in OBS on any computer)
+    let cancelled = false;
+    let lastTs = 0;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    if (overlayKey) {
+      const poll = async () => {
+        const res = await api.getOverlay(overlayKey, 'football', lastTs);
+        if (cancelled) return;
+        if (!res.ok) {
+          setSyncStatus('polling');
+          setOverlayError(res.data?.error === 'subscription_expired' ? 'expired' : res.status === 404 ? 'invalid' : '');
+          return;
+        }
+        setOverlayError('');
+        if (res.status === 204) {
+          setSyncStatus('connected');
+          return;
+        }
+        if (res.data?.updatedAt) lastTs = res.data.updatedAt;
+        const fm = res.data?.data?.footballMatch;
+        if (fm) handleIncomingMatch(fm);
       };
-      sse.onopen = () => setSyncStatus('connected');
-    } catch {}
-
-    // 2. Fast 250ms Polling Loop (checks /api/match first, falls back to Hostinger's /api/sync.php)
-    const pollTimer = setInterval(() => {
-      fetch(`/api/match?_t=${Date.now()}`, { cache: 'no-store' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.footballMatch) {
-            handleIncomingMatch(data.footballMatch);
-          } else {
-            throw new Error('Fallback to sync.php');
-          }
-        })
-        .catch(() => {
-          // Direct fallback to Hostinger Apache sync.php
-          fetch(`/api/sync.php?_t=${Date.now()}`, { cache: 'no-store' })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data) => {
-              if (data?.footballMatch) {
-                handleIncomingMatch(data.footballMatch);
-              }
-            })
-            .catch(() => {});
-        });
-    }, 250);
+      poll();
+      pollTimer = setInterval(poll, 400);
+    }
 
     // 3. BroadcastChannel for same-device cross-tab sync
     let channel: BroadcastChannel | null = null;
@@ -149,15 +140,16 @@ export const FootballOverlayPage: React.FC = () => {
     window.addEventListener('storage', handleStorage);
 
     return () => {
-      sse?.close();
-      clearInterval(pollTimer);
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
       channel?.close();
       window.removeEventListener('storage', handleStorage);
     };
-  }, [handleIncomingMatch]);
+  }, [handleIncomingMatch, overlayKey]);
 
-  // Direct live match takes precedence over context
+  // Keyed (OBS) mode shows only the owner's data; nothing until it arrives
   const match = directMatch || contextMatch;
+  const showScoreboard = !overlayKey || !!directMatch;
 
   // Goal celebration effects
   const lastAnimationRef = useRef<number>(0);
@@ -325,7 +317,14 @@ export const FootballOverlayPage: React.FC = () => {
             transformOrigin: 'top left',
           }}
         >
-          <FootballScoreboardGraphic match={match} />
+          {showScoreboard && <FootballScoreboardGraphic match={match} />}
+          {overlayKey && overlayError && !isObs && (
+            <div className="mt-4 max-w-xs p-3 rounded-xl bg-red-950/90 border border-red-700 text-red-100 text-xs font-bold">
+              {overlayError === 'expired'
+                ? 'এই overlay link এর account এর subscription শেষ হয়ে গেছে।'
+                : 'Overlay link টি সঠিক নয়। Links পেজ থেকে নতুন link কপি করুন।'}
+            </div>
+          )}
         </div>
       </div>
     </div>

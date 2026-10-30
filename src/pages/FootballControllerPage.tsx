@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useFootball, FOOTBALL_PRESETS } from '../context/FootballContext';
+import { useAuth } from '../context/AuthContext';
 import { FootballPeriod } from '../types/football';
 import { FootballScoreboardGraphic } from '../components/football/FootballScoreboardGraphic';
 import {
@@ -56,9 +57,9 @@ export const FootballControllerPage: React.FC = () => {
   const [previewStadium, setPreviewStadium] = useState(false);
 
   // Compute Overlay URL
-  const overlayUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/overlay/football`
-    : '/overlay/football';
+  const { user } = useAuth();
+  const overlayPath = `/overlay/football${user?.overlayKey ? `?key=${user.overlayKey}` : ''}`;
+  const overlayUrl = typeof window !== 'undefined' ? `${window.location.origin}${overlayPath}` : overlayPath;
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(overlayUrl);
@@ -108,7 +109,7 @@ export const FootballControllerPage: React.FC = () => {
             </button>
 
             <a
-              href="/overlay/football"
+              href={overlayPath}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition"

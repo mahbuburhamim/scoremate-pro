@@ -9,11 +9,20 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, featureName = 'Broadcast Feature' }) => {
-  const { isAuthenticated, hasActiveSubscription, user, openAuthModal } = useAuth();
+  const { isAuthenticated, hasActiveSubscription, user, openAuthModal, authLoading } = useAuth();
 
   // If user is logged in AND has an active subscription, let them in!
   if (isAuthenticated && hasActiveSubscription) {
     return <>{children}</>;
+  }
+
+  // Still checking the session with the server: don't flash the paywall
+  if (authLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin" />
+      </div>
+    );
   }
 
   // Otherwise, render a clean, high-conversion paywall gate
@@ -65,7 +74,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, featur
             className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-sm uppercase tracking-wider shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] active:scale-95 transition flex items-center justify-center gap-2"
           >
             <CreditCard className="w-4 h-4" />
-            <span>Choose a Plan (From ₹250)</span>
+            <span>Choose a Plan (From ৳99)</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
 

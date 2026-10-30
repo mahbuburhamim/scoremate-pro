@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Info, Check, CreditCard, Lock, Sparkles, Zap, ArrowRight, Smartphone, AlertCircle } from 'lucide-react';
 import { useAuth, SUBSCRIPTION_PLANS, Plan } from '../context/AuthContext';
-import confetti from 'canvas-confetti';
+
+// Your personal bKash / Nagad numbers that customers Send Money to.
+// Leave empty until set: the page then tells customers to contact you instead of showing a wrong number.
+const PAYMENT_NUMBERS: Record<'bkash' | 'nagad', string> = {
+  bkash: '',
+  nagad: '',
+};
 
 export const PaymentPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { user, purchasePlan, isAuthenticated, signup } = useAuth();
+  const { user, isAuthenticated, submitPayment, openAuthModal, refreshUser } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan>(SUBSCRIPTION_PLANS[0]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState<boolean>(false);
   const [paymentSuccess, setPaymentSuccess] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<'bkash' | 'nagad'>('bkash');
 
-  // Customer form for guest users
-  const [buyerName, setBuyerName] = useState(user?.name || '');
-  const [buyerEmail, setBuyerEmail] = useState(user?.email || '');
-  const [buyerPhone, setBuyerPhone] = useState(user?.phone || '');
+  const [senderNumber, setSenderNumber] = useState(user?.phone || '');
   const [trxId, setTrxId] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -27,46 +28,35 @@ export const PaymentPage: React.FC = () => {
 
   const handleProceed = () => {
     setFormError('');
+    if (!isAuthenticated) {
+      // Payments are tied to an account, so sign up / log in first
+      openAuthModal('signup');
+      return;
+    }
+    setPaymentSuccess(false);
     setShowCheckoutModal(true);
   };
 
   const handleConfirmPayment = async () => {
+    setFormError('');
     if (!isAuthenticated) {
-      if (!buyerEmail.trim() || !buyerName.trim()) {
-        setFormError('দয়া করে আপনার নাম এবং ইমেইল দিন যাতে সাবস্ক্রিপশন যুক্ত করা যায়।');
-        return;
-      }
-      await signup(buyerName, buyerEmail, buyerPhone);
+      openAuthModal('login');
+      return;
     }
-
     if (!trxId.trim()) {
       setFormError('অনুগ্রহ করে পেমেন্ট করার পর বিকাশ বা নগদের TrxID নম্বরটি লিখুন।');
       return;
     }
-
     setIsProcessing(true);
-
-    setTimeout(async () => {
-      await purchasePlan(selectedPlan, paymentMethod);
-      setIsProcessing(false);
-      setPaymentSuccess(true);
-
-      // Confetti burst
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-        });
-      } catch (e) {
-        // ignore
-      }
-
-      setTimeout(() => {
-        setShowCheckoutModal(false);
-        navigate('/dashboard');
-      }, 2000);
-    }, 1200);
+    const result = await submitPayment(selectedPlan, paymentMethod, trxId, senderNumber);
+    setIsProcessing(false);
+    if (!result.ok) {
+      setFormError(result.error || 'জমা দেওয়া যায়নি, আবার চেষ্টা করুন');
+      return;
+    }
+    setTrxId('');
+    setPaymentSuccess(true);
+    refreshUser();
   };
 
   return (
@@ -167,7 +157,7 @@ export const PaymentPage: React.FC = () => {
                 onClick={handleProceed}
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-sm uppercase tracking-wider shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] active:scale-95 transition flex items-center justify-center gap-2"
               >
-                <span>Proceed to Pay (পেমেন্ট করুন)</span>
+                <span>{isAuthenticated ? 'Proceed to Pay (পেমেন্ট করুন)' : 'Account খুলে পেমেন্ট করুন'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -196,14 +186,20 @@ export const PaymentPage: React.FC = () => {
 
             {paymentSuccess ? (
               <div className="py-8 flex flex-col items-center justify-center text-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center text-emerald-600">
-                  <Check className="w-8 h-8 animate-bounce" />
+                <div className="w-16 h-16 rounded-full bg-amber-100 border-2 border-amber-500 flex items-center justify-center text-amber-600">
+                  <Check className="w-8 h-8" />
                 </div>
-                <h4 className="font-heading font-black text-2xl text-slate-900">Payment Confirmed!</h4>
+                <h4 className="font-heading font-black text-2xl text-slate-900">Payment Submitted</h4>
                 <p className="text-sm text-slate-600">
-                  আপনার <strong>{selectedPlan.name}</strong> প্যাকেজ সফলভাবে চালু হয়েছে। ২৪ ঘণ্টার রিয়েল-টাইম কাউন্টডাউন শুরু হয়েছে।
+                  আপনার <strong>{selectedPlan.name}</strong> প্যাকেজের পেমেন্ট যাচাইয়ের জন্য জমা হয়েছে। মিলিয়ে দেখার পর প্যাকেজ চালু হবে, তখন এই পেজ বা ড্যাশবোর্ড refresh করলেই দেখতে পাবেন।
                 </p>
-                <span className="text-xs text-blue-600 font-mono">ড্যাশবোর্ডে প্রবেশ করানো হচ্ছে...</span>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutModal(false)}
+                  className="mt-2 px-6 py-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold"
+                >
+                  ঠিক আছে
+                </button>
               </div>
             ) : (
               <>
@@ -217,39 +213,6 @@ export const PaymentPage: React.FC = () => {
                     {getDisplayPrice(selectedPlan)}
                   </span>
                 </div>
-
-                {/* If user is not logged in, collect name and email */}
-                {!isAuthenticated && (
-                  <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                    <span className="text-xs font-bold text-blue-600 block uppercase tracking-wider">
-                      গ্রাহকের তথ্য (Subscriber Details)
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <label className="block text-slate-600 mb-1 font-semibold">আপনার নাম *</label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="পূর্ণ নাম"
-                          value={buyerName}
-                          onChange={(e) => setBuyerName(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-600 mb-1 font-semibold">ইমেইল ঠিকানা *</label>
-                        <input
-                          type="email"
-                          required
-                          placeholder="email@example.com"
-                          value={buyerEmail}
-                          onChange={(e) => setBuyerEmail(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Gateway Selector: Strictly bKash & Nagad Only */}
                 <div className="space-y-2 text-xs">
@@ -307,7 +270,7 @@ export const PaymentPage: React.FC = () => {
                     </p>
                     <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-pink-200">
                       <span className="text-slate-500 font-semibold">বিকাশ পার্সোনাল নম্বর:</span>
-                      <code className="font-mono text-pink-700 font-black text-sm">+8801700000000</code>
+                      <code className="font-mono text-pink-700 font-black text-sm">{PAYMENT_NUMBERS.bkash || 'নম্বরের জন্য Contact পেজে যোগাযোগ করুন'}</code>
                     </div>
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1">
@@ -339,7 +302,7 @@ export const PaymentPage: React.FC = () => {
                     </p>
                     <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-amber-200">
                       <span className="text-slate-500 font-semibold">নগদ পার্সোনাল নম্বর:</span>
-                      <code className="font-mono text-amber-700 font-black text-sm">+8801800000000</code>
+                      <code className="font-mono text-amber-700 font-black text-sm">{PAYMENT_NUMBERS.nagad || 'নম্বরের জন্য Contact পেজে যোগাযোগ করুন'}</code>
                     </div>
                     <div>
                       <label className="block text-slate-700 font-semibold mb-1">
@@ -355,6 +318,19 @@ export const PaymentPage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                <div className="text-xs">
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    যে নম্বর থেকে টাকা পাঠিয়েছেন (Sender number):
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="01XXXXXXXXX"
+                    value={senderNumber}
+                    onChange={(e) => setSenderNumber(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 text-xs font-mono placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                  />
+                </div>
 
                 {formError && (
                   <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
@@ -379,11 +355,11 @@ export const PaymentPage: React.FC = () => {
                     className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-xs uppercase tracking-wider shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] flex items-center gap-2 active:scale-95 transition"
                   >
                     {isProcessing ? (
-                      <span>Verifying & Activating...</span>
+                      <span>জমা হচ্ছে...</span>
                     ) : (
                       <>
                         <Lock className="w-3.5 h-3.5" />
-                        <span>Pay {getDisplayPrice(selectedPlan)} & Unlock Pro</span>
+                        <span>Submit TrxID ({getDisplayPrice(selectedPlan)})</span>
                       </>
                     )}
                   </button>

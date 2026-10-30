@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User as UserIcon, Phone, Sparkles, CheckCircle2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, Phone, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const AuthModal: React.FC = () => {
-  const { authModalOpen, authModalMode, closeAuthModal, openAuthModal, login, signup, demoPaidLogin } = useAuth();
+  const { authModalOpen, authModalMode, closeAuthModal, openAuthModal, login, signup } = useAuth();
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -21,28 +21,30 @@ export const AuthModal: React.FC = () => {
     setErrorMsg('');
 
     if (!email.trim()) {
-      setErrorMsg('Please enter your email address');
+      setErrorMsg('ইমেইল দিন (Please enter your email address)');
+      return;
+    }
+    if (!isLogin && !name.trim()) {
+      setErrorMsg('আপনার নাম দিন (Please enter your full name)');
+      return;
+    }
+    if (!password) {
+      setErrorMsg('পাসওয়ার্ড দিন (Please enter your password)');
+      return;
+    }
+    if (!isLogin && password.length < 8) {
+      setErrorMsg('পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে (At least 8 characters)');
       return;
     }
 
     setIsLoading(true);
-
-    try {
-      if (isLogin) {
-        await login(email, password);
-      } else {
-        if (!name.trim()) {
-          setErrorMsg('Please enter your full name');
-          setIsLoading(false);
-          return;
-        }
-        await signup(name, email, phone, password);
-      }
-    } catch {
-      setErrorMsg('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+    const result = isLogin ? await login(email, password) : await signup(name, email, password, phone);
+    setIsLoading(false);
+    if (!result.ok) {
+      setErrorMsg(result.error || 'কিছু একটা ভুল হয়েছে, আবার চেষ্টা করুন');
+      return;
     }
+    setPassword('');
   };
 
   return (
@@ -137,7 +139,10 @@ export const AuthModal: React.FC = () => {
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
               <input
                 type="password"
-                placeholder="••••••••"
+                required
+                minLength={isLogin ? undefined : 8}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                placeholder={isLogin ? '••••••••' : 'কমপক্ষে ৮ অক্ষর'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none text-sm text-slate-900 placeholder-slate-400 font-medium transition"
@@ -151,7 +156,7 @@ export const AuthModal: React.FC = () => {
             className="mt-2 w-full py-3 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-700 hover:to-sky-600 text-white font-heading font-black text-sm uppercase tracking-wider shadow-[0_10px_25px_-5px_rgba(37,99,235,0.4)] active:scale-95 transition flex items-center justify-center gap-2"
           >
             {isLoading ? (
-              <span>Signing in...</span>
+              <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
             ) : (
               <>
                 <span>{isLogin ? 'Log In' : 'Create Free Account'}</span>
@@ -186,17 +191,6 @@ export const AuthModal: React.FC = () => {
           )}
         </div>
 
-        {/* Demo One-Click Login Button for quick client testing */}
-        <div className="pt-3 border-t border-slate-200/80 flex flex-col items-center">
-          <button
-            type="button"
-            onClick={demoPaidLogin}
-            className="w-full py-2.5 px-4 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 transition shadow-sm"
-          >
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>Instant Demo: Test as Paid Member (1 Click)</span>
-          </button>
-        </div>
       </div>
     </div>
   );
