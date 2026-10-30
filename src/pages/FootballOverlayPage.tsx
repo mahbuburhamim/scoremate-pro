@@ -232,7 +232,7 @@ export const FootballOverlayPage: React.FC = () => {
       )}
 
       {/* Subtle OBS / Testing control pill in top-right (hidden in iframe) */}
-      {!isInsideIframe && (
+      {!isInsideIframe && !isObs && (
         <>
           <div
             className={`fixed top-4 right-4 z-50 transition-opacity duration-300 ${

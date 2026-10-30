@@ -25,6 +25,11 @@ export const OverlayPage: React.FC = () => {
   // Toggle stadium background for browser testing
   const [showStadiumBg, setShowStadiumBg] = useState<boolean>(false);
   const [showTestBar, setShowTestBar] = useState<boolean>(true);
+  // Inside OBS (or ?obs=1 / ?clean=1) the testing toolbar must never render
+  const isObs =
+    searchParams.get('obs') === '1' ||
+    searchParams.get('clean') === '1' ||
+    (typeof window !== 'undefined' && (window as any).obsstudio !== undefined);
   const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
 
   // Direct match lookup state for immediate resolution from live SSE / API feeds
@@ -187,7 +192,7 @@ export const OverlayPage: React.FC = () => {
       }}
     >
       {/* Subtle testing toolbar (relocated to top-right corner, completely hidden inside iframes) */}
-      {!isInsideIframe && (
+      {!isInsideIframe && !isObs && (
         <>
           <div
             className={`fixed top-3 right-3 z-50 transition-opacity duration-300 ${
